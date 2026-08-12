@@ -19,51 +19,55 @@
 @font-face { font-family: 'JetBrains Mono'; src: url('../fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 
 :root {
-  /* --- surfaces (night lilac, the default) --- */
-  --bg-0: #0b0714;
-  --bg-1: #150c26;
-  --bg-2: #1e1235;
-  --bg-3: #2a1a4a;
-  --bg-4: #34215c;
-  --line: #3a2560;
-  --line-soft: #281a45;
+  /* --- surfaces (carbon, the default: neutral charcoal, no colour cast) --- */
+  --bg-0: #0d0d0f;
+  --bg-1: #131316;
+  --bg-2: #191a1d;
+  --bg-3: #212226;
+  --bg-4: #2c2d32;
+  --line: #2a2b31;
+  --line-soft: #1f2024;
 
   /* --- ink --- */
-  --text: #ece6f7;
-  --muted: #9d90b8;
-  --faint: #6f6490;
+  --text: #eceef1;
+  --muted: #9b9da5;
+  --faint: #6c6e77;
 
   /* --- accent family --- */
-  --accent: #c9a7ff;
-  --accent-dim: #8f6fd0;
-  --accent-deep: #5b2fa8;
-  --accent-ink: #14082a;
+  --accent: #e5484d;
+  --accent-dim: #b7373c;
+  --accent-deep: #7c2327;
+  --accent-ink: #ffffff;       /* text sitting on top of a solid accent */
 
   /* --- severity / "harder things" --- */
-  --sev-1: #ffb454;
-  --sev-2: #ff6b8a;
-  --sev-3: #6ee7c0;
+  --sev-1: #e6a23c;
+  --sev-2: #e5484d;
+  --sev-3: #3aa981;
 
   /* --- paper (the doc surface) --- */
-  --paper: #150d27;
-  --paper-edge: #2b1c4c;
+  --paper: #131316;
+  --paper-edge: #26272c;
+
+  /* --- shadow: one neutral colour, four depths. themes tune the alphas --- */
+  --shade: 0 0 0;
+  --sh1: .30; --sh2: .36; --sh3: .46; --sh4: .40;
 
   /* --- derived --- */
-  --glow: color-mix(in srgb, var(--accent) 18%, transparent);
-  --glow-soft: color-mix(in srgb, var(--accent) 10%, transparent);
-  --sel-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+  --glow: color-mix(in srgb, var(--accent) 13%, transparent);
+  --glow-soft: color-mix(in srgb, var(--accent) 7%, transparent);
+  --sel-bg: color-mix(in srgb, var(--accent) 28%, transparent);
   --hair: color-mix(in srgb, var(--line) 65%, transparent);
-  --shadow-1: 0 1px 2px rgba(0,0,0,.4);
-  --shadow-2: 0 8px 24px -10px rgba(0,0,0,.65), 0 1px 0 rgba(255,255,255,.03) inset;
-  --shadow-3: 0 26px 60px -22px rgba(0,0,0,.85), 0 1px 0 rgba(255,255,255,.05) inset;
-  --shadow-pop: 0 18px 44px -16px rgba(0,0,0,.8);
+  --shadow-1: 0 1px 2px rgb(var(--shade) / var(--sh1));
+  --shadow-2: 0 4px 14px -6px rgb(var(--shade) / var(--sh2));
+  --shadow-3: 0 16px 40px -16px rgb(var(--shade) / var(--sh3));
+  --shadow-pop: 0 12px 32px -12px rgb(var(--shade) / var(--sh4));
 
   /* --- shape / rhythm (settings can override) --- */
-  --radius: 14px;
-  --radius-sm: 9px;
-  --radius-lg: 20px;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
   --pad: 16px;
-  --row: 34px;
+  --row: 32px;
 
   /* --- type --- */
   --font-ui: Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -89,15 +93,64 @@
   color-scheme: dark;
 }
 
-/* ---------------- theme presets ---------------- */
+/* ---------------- theme presets ----------------
 
+   the first four are the quiet ones: neutral surfaces, one restrained accent,
+   nothing glowing. everything below them is deliberately loud and was asked
+   for by name — leave those alone.                                            */
+
+/* the default, spelled out so picking it in settings works like any other */
+:root[data-theme="carbon"] {
+  --bg-0: #0d0d0f; --bg-1: #131316; --bg-2: #191a1d; --bg-3: #212226; --bg-4: #2c2d32;
+  --line: #2a2b31; --line-soft: #1f2024;
+  --text: #eceef1; --muted: #9b9da5; --faint: #6c6e77;
+  --accent: #e5484d; --accent-dim: #b7373c; --accent-deep: #7c2327; --accent-ink: #ffffff;
+  --sev-1: #e6a23c; --sev-2: #e5484d; --sev-3: #3aa981;
+  --paper: #131316; --paper-edge: #26272c;
+}
+
+/* the same idea, one degree warmer — this is the red/black one */
 :root[data-theme="ember"] {
-  --bg-0: #0a0608; --bg-1: #150a0d; --bg-2: #1d0f13; --bg-3: #2b161c; --bg-4: #3a1e26;
-  --line: #4a232d; --line-soft: #2f1419;
-  --text: #f8ebed; --muted: #bd989e; --faint: #8c6a71;
-  --accent: #ff4d5e; --accent-dim: #c53a49; --accent-deep: #8e1f2d; --accent-ink: #1b0508;
-  --sev-1: #ffc357; --sev-2: #ff8a3d; --sev-3: #4fd1a5;
-  --paper: #150b0e; --paper-edge: #37191f;
+  --bg-0: #0e0c0c; --bg-1: #141212; --bg-2: #1a1817; --bg-3: #232120; --bg-4: #2e2b2a;
+  --line: #2d2928; --line-soft: #211e1e;
+  --text: #f0ecea; --muted: #a29b98; --faint: #726b69;
+  --accent: #e5484d; --accent-dim: #b7373c; --accent-deep: #7c2327; --accent-ink: #ffffff;
+  --sev-1: #e0a13d; --sev-2: #e5484d; --sev-3: #3ca884;
+  --paper: #141211; --paper-edge: #2a2726;
+}
+
+/* cool neutral, blue-grey — the most "office" of the set */
+:root[data-theme="slate"] {
+  --bg-0: #0c0e12; --bg-1: #12151b; --bg-2: #171b22; --bg-3: #1f242d; --bg-4: #2a303b;
+  --line: #272d37; --line-soft: #1c2028;
+  --text: #e8ecf2; --muted: #949cab; --faint: #68707e;
+  --accent: #5b8dee; --accent-dim: #3f6cc4; --accent-deep: #274a8c; --accent-ink: #ffffff;
+  --sev-1: #d99b3c; --sev-2: #e15b62; --sev-3: #3ba888;
+  --paper: #12151b; --paper-edge: #242a34;
+}
+
+/* daylight — the light one. same shapes, inverted surfaces, softer shadows */
+:root[data-theme="daylight"] {
+  --bg-0: #f6f7f8; --bg-1: #ffffff; --bg-2: #ffffff; --bg-3: #f0f1f3; --bg-4: #e3e5e9;
+  --line: #e0e2e7; --line-soft: #ebedf0;
+  --text: #14161a; --muted: #5c6069; --faint: #888d97;
+  /* accent-deep stays dark even here — white text sits on it (selected segments, switches) */
+  --accent: #cf3239; --accent-dim: #a9262d; --accent-deep: #8a2026; --accent-ink: #ffffff;
+  --sev-1: #a56a10; --sev-2: #c22a31; --sev-3: #12795a;
+  --paper: #ffffff; --paper-edge: #e6e8ec;
+  --shade: 22 24 30;
+  --sh1: .07; --sh2: .09; --sh3: .14; --sh4: .12;
+  color-scheme: light;
+}
+
+/* the original default, kept because it was in the picker */
+:root[data-theme="night-lilac"] {
+  --bg-0: #0b0714; --bg-1: #150c26; --bg-2: #1e1235; --bg-3: #2a1a4a; --bg-4: #34215c;
+  --line: #3a2560; --line-soft: #281a45;
+  --text: #ece6f7; --muted: #9d90b8; --faint: #6f6490;
+  --accent: #c9a7ff; --accent-dim: #8f6fd0; --accent-deep: #5b2fa8; --accent-ink: #14082a;
+  --sev-1: #ffb454; --sev-2: #ff6b8a; --sev-3: #6ee7c0;
+  --paper: #150d27; --paper-edge: #2b1c4c;
 }
 
 :root[data-theme="ash"] {

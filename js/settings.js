@@ -8,7 +8,10 @@ import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from 
 import { animate, settle, fadeOut, EASE } from './motion.js';
 
 const THEMES = [
-  ['ember', 'ember', ['#0a0608', '#1d0f13', '#ff4d5e']],
+  ['carbon', 'carbon', ['#0d0d0f', '#191a1d', '#e5484d']],
+  ['ember', 'ember', ['#0e0c0c', '#1a1817', '#e5484d']],
+  ['slate', 'slate', ['#0c0e12', '#171b22', '#5b8dee']],
+  ['daylight', 'daylight', ['#f6f7f8', '#ffffff', '#cf3239']],
   ['ash', 'ash', ['#08080a', '#17171a', '#ff3b46']],
   ['aimbot', 'aimbot', ['#040706', '#0f1a16', '#39ff9e']],
   ['esp', 'esp', ['#03060c', '#0c1a2b', '#00e5ff']],
@@ -42,7 +45,7 @@ const ACCENTS = [
 
 export function applySettings(s = state.settings) {
   const root = document.documentElement;
-  root.dataset.theme = s.theme || 'ember';
+  root.dataset.theme = s.theme || 'carbon';
   root.dataset.motion = s.motion || 'full';
   root.dataset.density = s.density || 'comfortable';
   root.dataset.font = s.font || 'sans';
@@ -50,9 +53,9 @@ export function applySettings(s = state.settings) {
   root.style.setProperty('--text-size', `${s.textSize || 16}px`);
   root.style.setProperty('--line-height', String(s.lineHeight || 1.65));
   root.style.setProperty('--page-width', `${s.pageWidth || 78}ch`);
-  root.style.setProperty('--radius', `${s.radius ?? 14}px`);
-  root.style.setProperty('--radius-sm', `${Math.max(4, (s.radius ?? 14) - 5)}px`);
-  root.style.setProperty('--radius-lg', `${(s.radius ?? 14) + 6}px`);
+  root.style.setProperty('--radius', `${s.radius ?? 8}px`);
+  root.style.setProperty('--radius-sm', `${Math.max(3, (s.radius ?? 8) - 2)}px`);
+  root.style.setProperty('--radius-lg', `${(s.radius ?? 8) + 4}px`);
 
   const accent = ACCENTS.find((a) => a[0] === s.accent && a[2]);
   if (accent) {
@@ -164,7 +167,7 @@ function appearanceTab(s) {
     ),
     h('section.gear-section',
       h('h3', { text: 'shape' }),
-      slider('corner rounding', 'radius', s.radius ?? 14, 0, 24, 1, 'px'),
+      slider('corner rounding', 'radius', s.radius ?? 8, 0, 20, 1, 'px'),
       labelled('density', segmented([
         { label: 'comfortable', value: 'comfortable' }, { label: 'compact', value: 'compact' },
       ], s.density || 'comfortable', (v) => { setSetting('density', v); applySettings(); })),

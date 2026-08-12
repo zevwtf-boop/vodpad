@@ -192,7 +192,8 @@ export function paintStatus() {
   if (!right) return;
   const s = pageStats(state.cardId);
   clear(right);
-  right.append(
+  // Element.append stringifies null into the literal text "null" — filter first
+  right.append(...[
     h('span.status-item', { text: `${s.words} words` }),
     h('span.status-sep'),
     h('span.status-item', { text: `${s.blocks} blocks` }),
@@ -200,7 +201,7 @@ export function paintStatus() {
     s.pictures ? h('span.status-item', { text: `${s.pictures} pictures` }) : null,
     s.todo ? h('span.status-sep') : null,
     s.todo ? h('span.status-item', { text: `${s.done}/${s.todo} done` }) : null,
-  );
+  ].filter(Boolean));
 }
 
 /* ---------------------------------------------------------------- render */

@@ -3,16 +3,18 @@
 import { $, h, clear, fmtRel, fmtDate, previewOf, escapeHtml, debounce } from './util.js';
 import { icon } from './icons.js';
 import { mediaUrl, api, mode } from './api.js';
-import { state, bus, createBoard, deleteBoard, refreshBoards, cardTitle, saveSettings } from './store.js';
+import { state, bus, createBoard, deleteBoard, refreshBoards, cardTitle, saveSettings, ownerCounts, isForeign } from './store.js';
 import { registerSurface, go } from './nav.js';
 import { toast, contextMenu, promptDialog, confirmDialog } from './ui.js';
 import { stagger, countUp, animate, EASE } from './motion.js';
 import { allCards } from './corpus.js';
 import { openGear } from './settings.js';
 
-let view = { kind: 'all', tag: null };
+let view = { kind: 'all', tag: null, owner: null };
 let query = '';
 let host = null;
+
+const show = (kind, extra = {}) => { view = { kind, tag: null, owner: null, ...extra }; render(); };
 
 registerSurface('dash', {
   mount(el) { host = el; render(); },
@@ -46,6 +48,7 @@ function rail() {
     { kind: 'drill', label: 'drill list', ico: 'drill' },
   ];
   const tags = tagCounts().slice(0, 9);
+  const owners = state.admin ? ownerCounts() : [];
 
   return h('aside.dash-rail',
     h('div.rail-brand',
@@ -54,15 +57,24 @@ function rail() {
 
     h('nav.rail-nav', ...items.map((it) => h('button.rail-item', {
       class: view.kind === it.kind ? 'on' : '',
-      on: { click: () => { view = { kind: it.kind, tag: null }; render(); } },
+      on: { click: () => show(it.kind) },
     }, icon(it.ico, { size: 16 }), h('span', { text: it.label }),
        it.kind === 'drill' ? h('span.rail-count', { text: String(totals().drill || '') }) : null))),
+
+    owners.length > 1 ? h('div.rail-group',
+      h('div.rail-label', { text: 'accounts' }),
+      ...owners.map(([name, n]) => h('button.rail-item.small', {
+        class: view.kind === 'owner' && view.owner === name ? 'on' : '',
+        tip: name === state.user ? 'your own sessions' : `everything ${name} has written`,
+        on: { click: () => show('owner', { owner: name }) },
+      }, icon(name === state.user ? 'shield' : 'user', { size: 15 }),
+         h('span', { text: name }), h('span.rail-count', { text: String(n) })))) : null,
 
     tags.length ? h('div.rail-group',
       h('div.rail-label', { text: 'tags' }),
       ...tags.map(([tag, n]) => h('button.rail-item.small', {
         class: view.kind === 'tag' && view.tag === tag ? 'on' : '',
-        on: { click: () => { view = { kind: 'tag', tag }; render(); } },
+        on: { click: () => show('tag', { tag }) },
       }, h('span.rail-hash', { text: '#' }), h('span', { text: tag }), h('span.rail-count', { text: String(n) })))) : null,
 
     h('div.rail-foot',
@@ -80,9 +92,9 @@ function main() {
   el.append(h('header.dash-head',
     h('div.dash-hello',
       h('h1', { text: greeting() }),
-      h('p', { text: state.boards.length
-        ? `${state.boards.length} session${state.boards.length === 1 ? '' : 's'} · last touched ${fmtRel(state.boards[0]?.updated)}`
-        : 'nothing here yet — make your first session' })),
+      h('p', { text: helloLine() }),
+      state.admin ? h('span.admin-badge', { tip: 'you can see and edit every account here' },
+        icon('shield', { size: 12 }), 'admin') : null),
     h('div.dash-actions',
       h('div.dash-search',
         icon('search', { size: 15 }),
@@ -108,6 +120,18 @@ function main() {
   return el;
 }
 
+function helloLine() {
+  const n = state.boards.length;
+  if (!n) return 'nothing here yet — make your first session';
+  const bits = [`${n} session${n === 1 ? '' : 's'}`];
+  if (state.admin) {
+    const accounts = ownerCounts().length;
+    if (accounts > 1) bits.push(`across ${accounts} accounts`);
+  }
+  bits.push(`last touched ${fmtRel(state.boards[0]?.updated)}`);
+  return bits.join(' · ');
+}
+
 function statTile(label, value, ico, cls = '') {
   const num = h('div.stat-num', { text: String(value) });
   requestAnimationFrame(() => countUp(num, value));
@@ -129,9 +153,12 @@ async function paintGrid() {
   if (view.kind === 'starred') list = list.filter((b) => b.starred);
   if (view.kind === 'recent') list = list.slice(0, 8);
   if (view.kind === 'tag') list = list.filter((b) => b.tags && b.tags[view.tag]);
+  if (view.kind === 'owner') list = list.filter((b) => b.owner === view.owner);
   if (query.trim()) {
     const q = query.toLowerCase();
-    list = list.filter((b) => b.title.toLowerCase().includes(q) || Object.keys(b.tags || {}).some((t) => t.includes(q)));
+    list = list.filter((b) => b.title.toLowerCase().includes(q)
+      || String(b.owner || '').toLowerCase().includes(q)
+      || Object.keys(b.tags || {}).some((t) => t.includes(q)));
   }
 
   if (!list.length) {
@@ -147,6 +174,7 @@ async function paintGrid() {
 }
 
 const sectionTitle = () => view.kind === 'tag' ? `#${view.tag}`
+  : view.kind === 'owner' ? (view.owner === state.user ? 'your sessions' : `${view.owner}'s sessions`)
   : view.kind === 'starred' ? 'starred'
   : view.kind === 'recent' ? 'recently opened' : 'all sessions';
 
@@ -177,8 +205,13 @@ function sessionCard(meta) {
       tip: 'more', on: { click: (e) => { e.stopPropagation(); cardMenu(meta, e.currentTarget); } },
     }, icon('dots', { size: 15 })),
     meta.starred ? h('span.sc-star', icon('starOn', { size: 14 })) : null,
-    meta.shared ? h('span.sc-shared', { tip: meta.mine === false ? `shared by ${meta.owner}` : 'shared with the other accounts' },
-      icon('link', { size: 12 }), meta.mine === false ? meta.owner : 'shared') : null,
+    isForeign(meta)
+      ? h('span.sc-owner', {
+          tip: meta.shared ? `${meta.owner} shared this with everyone` : `${meta.owner}'s session — you see it because you are an admin`,
+        }, icon('user', { size: 12 }), meta.owner)
+      : meta.shared
+        ? h('span.sc-shared', { tip: 'shared with the other accounts' }, icon('link', { size: 12 }), 'shared')
+        : null,
   );
 
   card.addEventListener('click', () => open(meta, card));
@@ -193,8 +226,11 @@ function open(meta, from) {
 
 function cardMenu(meta, anchor, x, y) {
   const synced = mode === 'cloud';
-  const mine = !synced || meta.mine !== false;
+  const foreign = synced && isForeign(meta);
+  // an admin has full control over everyone's sessions, not just their own
+  const mine = !foreign || state.admin;
   contextMenu([
+    foreign ? { header: `${meta.owner}'s session` } : null,
     { label: 'open', icon: 'forward', onPick: () => open(meta) },
     { label: 'open the map', icon: 'grid', onPick: () => go({ name: 'board', boardId: meta.id }) },
     { sep: true },
@@ -240,9 +276,14 @@ async function star(meta) {
 }
 
 async function remove(meta) {
+  const synced = mode === 'cloud';
   const ok = await confirmDialog({
     title: `delete "${meta.title}"?`,
-    body: 'it moves to data\\trash inside the vodpad folder, so it is recoverable — but it disappears from here.',
+    body: synced && isForeign(meta)
+      ? `this one belongs to ${meta.owner}. deleting it here takes it off their dashboard too, and there is no undo.`
+      : synced
+        ? 'it is gone from the cloud for good — the hosted build has no trash folder.'
+        : 'it moves to data\\trash inside the vodpad folder, so it is recoverable — but it disappears from here.',
     okLabel: 'delete', danger: true,
   });
   if (!ok) return;
@@ -265,7 +306,9 @@ async function paintDrill(body) {
   body.append(h('div.dash-section',
     h('div.section-head',
       h('h2', { text: 'drill list' }),
-      h('span.section-note', { text: 'every note you marked as costing you games' })),
+      h('span.section-note', { text: state.admin
+        ? 'every note anyone marked as costing them games'
+        : 'every note you marked as costing you games' })),
     h('div.drill-list', h('div.skel', { style: { height: '72px' } }), h('div.skel', { style: { height: '72px', marginTop: '10px' } }))));
 
   const cards = await allCards();
@@ -281,8 +324,11 @@ async function paintDrill(body) {
     return;
   }
 
+  const owners = new Map(state.boards.map((b) => [b.id, b.mine === false ? b.owner : null]));
+
   for (const row of rows) {
     const preview = previewOf(row.card.blocks, 130);
+    const owner = owners.get(row.boardId);
     list.append(h('button.drill-row', {
       on: { click: () => go({ name: 'page', boardId: row.boardId, cardId: row.card.id }) },
     },
@@ -291,6 +337,7 @@ async function paintDrill(body) {
         h('div.drill-title', { text: cardTitle(row.card) }),
         preview ? h('div.drill-preview', { text: preview }) : null,
         h('div.drill-meta',
+          owner ? h('span.chip.chip-owner', icon('user', { size: 11 }), h('span', { text: owner })) : null,
           h('span', { text: row.boardTitle }),
           h('span.dot', { text: '·' }),
           h('span', { text: fmtRel(row.card.updated) }),

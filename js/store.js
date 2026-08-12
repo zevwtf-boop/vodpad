@@ -8,6 +8,8 @@ export const bus = emitter();
 
 export const state = {
   ready: false,
+  user: null,                       // signed-in account, on the hosted builds
+  admin: false,                     // this account sees every account's sessions
   settings: {},
   boards: [],                       // lightweight meta for the dashboard
   board: null,                      // the open session document
@@ -22,7 +24,7 @@ export const state = {
 
 export async function boot() {
   const data = await api.boards();
-  state.boards = data.boards || [];
+  takeBoards(data);
   state.settings = data.settings || {};
   state.ready = true;
   bus.emit('boards');
@@ -30,9 +32,26 @@ export async function boot() {
 }
 
 export async function refreshBoards() {
-  const data = await api.boards();
-  state.boards = data.boards || [];
+  takeBoards(await api.boards());
   bus.emit('boards');
+}
+
+/** the synced worker also tells us who we are and whether we're an admin.
+ *  the desktop server and the local vault send neither, so both stay falsy. */
+function takeBoards(data) {
+  state.boards = data.boards || [];
+  if (data.user) state.user = data.user;
+  state.admin = !!data.admin;
+}
+
+/** boards belonging to somebody else — only ever non-empty for an admin */
+export const isForeign = (meta) => meta.mine === false;
+
+export function ownerCounts() {
+  const counts = new Map();
+  for (const b of state.boards) counts.set(b.owner || '', (counts.get(b.owner || '') || 0) + 1);
+  counts.delete('');
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
 /* ---------------------------------------------------------------- undo */

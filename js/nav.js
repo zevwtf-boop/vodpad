@@ -100,6 +100,7 @@ export function paintChrome() {
   $('#tb-read').hidden = onDash;
   $('#tb-video').hidden = onDash;
   $('#tb-title').textContent = onDash ? 'vodpad' : (state.board?.title || '');
+  paintOwner(onDash ? null : state.boards.find((b) => b.id === r.boardId));
 
   const crumbs = clear($('#crumbs'));
   if (onDash) return;
@@ -123,6 +124,17 @@ export function paintChrome() {
     crumbs.append(h('span.crumb-sep', { text: '›' }));
     crumbs.append(h('span.crumb.here', { text: 'map' }));
   }
+}
+
+/** an admin editing someone else's notes should never be in any doubt about it */
+function paintOwner(meta) {
+  const el = $('#tb-owner');
+  if (!el) return;
+  if (!meta || meta.mine !== false) { el.hidden = true; return; }
+  clear(el);
+  el.append(icon('user', { size: 12 }), h('span', { text: meta.owner }));
+  el.dataset.tip = `this session belongs to ${meta.owner} — anything you type here lands in their copy`;
+  el.hidden = false;
 }
 
 /* save light */
