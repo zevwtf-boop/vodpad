@@ -40,17 +40,66 @@ const serverApi = {
    ------------------------------------------------------------------ */
 
 export let api = serverApi;
-export let isStatic = false;
+export let isStatic = false;      // no local python server behind us
+export let mode = 'server';       // server | cloud | vault
 
 export async function chooseBackend() {
+  // 1. the desktop app: a python server is right there
   try {
     const res = await fetch('api/ping', { cache: 'no-store' });
-    if (res.ok) { api = serverApi; isStatic = false; return 'server'; }
-  } catch { /* no server: hosted build */ }
+    if (res.ok) { api = serverApi; isStatic = false; mode = 'server'; return mode; }
+  } catch { /* hosted build, keep looking */ }
+
+  isStatic = true;
+
+  // 2. a hosted build pointed at a cloudflare worker: real accounts, synced
+  let config = null;
+  try { config = await (await fetch('config.json', { cache: 'no-store' })).json(); } catch { /* optional */ }
+  if (config && config.api) {
+    const cloud = await import('./cloud.js');
+    cloud.configure(config.api);
+    api = cloud.cloudApi;
+    registerStaticMedia(cloud.cloudMediaUrl);
+    mode = 'cloud';
+    return mode;
+  }
+
+  // 3. otherwise everything stays in this browser, encrypted
   const vault = await import('./vault.js');
   api = vault.localApi;
-  isStatic = true;
-  return 'static';
+  registerStaticMedia(vault.localMediaUrl);
+  mode = 'vault';
+  return mode;
+}
+
+/* ---- one door, whichever backend is behind it ---- */
+
+export async function alreadySignedIn() {
+  if (mode !== 'cloud') return false;
+  const cloud = await import('./cloud.js');
+  return cloud.resume();
+}
+
+export async function signIn(name, password) {
+  if (mode === 'cloud') {
+    const cloud = await import('./cloud.js');
+    await cloud.login(name, password);
+    return cloud.cloudUser();
+  }
+  const vault = await import('./vault.js');
+  return (await vault.unlock(name, password)) ? vault.currentUser() : null;
+}
+
+export async function signOut() {
+  if (mode === 'cloud') (await import('./cloud.js')).logout();
+  else (await import('./vault.js')).lock();
+  location.reload();
+}
+
+export async function whoAmI() {
+  if (mode === 'cloud') return (await import('./cloud.js')).cloudUser();
+  if (mode === 'vault') return (await import('./vault.js')).currentUser();
+  return null;
 }
 
 /** media path stored in a board ("media/ab12.png") -> a url the browser can load */

@@ -2,7 +2,7 @@
 
 import { $, h, clear, fmtRel, fmtDate, previewOf, escapeHtml, debounce } from './util.js';
 import { icon } from './icons.js';
-import { mediaUrl, api } from './api.js';
+import { mediaUrl, api, mode } from './api.js';
 import { state, bus, createBoard, deleteBoard, refreshBoards, cardTitle, saveSettings } from './store.js';
 import { registerSurface, go } from './nav.js';
 import { toast, contextMenu, promptDialog, confirmDialog } from './ui.js';
@@ -175,6 +175,8 @@ function sessionCard(meta) {
       tip: 'more', on: { click: (e) => { e.stopPropagation(); cardMenu(meta, e.currentTarget); } },
     }, icon('dots', { size: 15 })),
     meta.starred ? h('span.sc-star', icon('starOn', { size: 14 })) : null,
+    meta.shared ? h('span.sc-shared', { tip: meta.mine === false ? `shared by ${meta.owner}` : 'shared with the other accounts' },
+      icon('link', { size: 12 }), meta.mine === false ? meta.owner : 'shared') : null,
   );
 
   card.addEventListener('click', () => open(meta, card));
@@ -188,16 +190,29 @@ function open(meta, from) {
 }
 
 function cardMenu(meta, anchor, x, y) {
+  const synced = mode === 'cloud';
+  const mine = !synced || meta.mine !== false;
   contextMenu([
     { label: 'open', icon: 'forward', onPick: () => open(meta) },
     { label: 'open the map', icon: 'grid', onPick: () => go({ name: 'board', boardId: meta.id }) },
     { sep: true },
-    { label: 'rename', icon: 'pen', onPick: () => rename(meta) },
+    mine ? { label: 'rename', icon: 'pen', onPick: () => rename(meta) } : null,
     { label: meta.starred ? 'unstar' : 'star', icon: meta.starred ? 'starOn' : 'star', onPick: () => star(meta) },
-    { label: 'show files', icon: 'folder', onPick: () => api.reveal('board', meta.id).catch(() => {}) },
-    { sep: true },
-    { label: 'delete session', icon: 'trash', danger: true, onPick: () => remove(meta) },
-  ], anchor ? { anchor, align: 'end' } : { x, y });
+    synced && mine ? {
+      label: meta.shared ? 'stop sharing it' : 'share with the other accounts',
+      icon: meta.shared ? 'eye' : 'link',
+      onPick: async () => {
+        try {
+          await api.setShared(meta.id, !meta.shared);
+          await refreshBoards();
+          toast(meta.shared ? 'back to private' : 'shared — the others can open it now', { kind: 'ok' });
+        } catch (err) { toast(err.message, { kind: 'error' }); }
+      },
+    } : null,
+    !synced ? { label: 'show files', icon: 'folder', onPick: () => api.reveal('board', meta.id).catch(() => {}) } : null,
+    mine ? { sep: true } : null,
+    mine ? { label: 'delete session', icon: 'trash', danger: true, onPick: () => remove(meta) } : null,
+  ].filter(Boolean), anchor ? { anchor, align: 'end' } : { x, y });
 }
 
 async function rename(meta) {

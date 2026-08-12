@@ -2,7 +2,7 @@
 
 import { $, h, clear } from './util.js';
 import { icon } from './icons.js';
-import { api, isStatic } from './api.js';
+import { api, isStatic, mode } from './api.js';
 import { state, setSetting, bus } from './store.js';
 import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from './ui.js';
 import { animate, settle, fadeOut, EASE } from './motion.js';
@@ -243,23 +243,30 @@ function dataTab() {
   );
 }
 
-/* the hosted build keeps everything in this browser, so backups matter more */
+/* the hosted build: either synced through the worker, or sealed in this browser */
 function webDataTab() {
-  const size = h('p.modal-text', { text: 'measuring…' });
-  import('./vault.js').then(async (v) => {
-    const s = await v.vaultSize();
-    size.textContent = `${s.records} sealed records · about ${(s.bytes / 1048576).toFixed(1)} mb, all of it encrypted with your password.`;
-  });
+  const synced = mode === 'cloud';
+  const size = h('p.modal-text', { text: synced ? '' : 'measuring…' });
+  if (!synced) {
+    import('./vault.js').then(async (v) => {
+      const s = await v.vaultSize();
+      size.textContent = `${s.records} sealed records · about ${(s.bytes / 1048576).toFixed(1)} mb, all of it encrypted with your password.`;
+    });
+  }
 
   return h('div',
     h('section.gear-section',
       h('h3', { text: 'signed in' }),
-      h('p.modal-text', { text: `you are ${currentUserName()} on the hosted copy. your notes live in this browser only — they do not follow you to another device.` }),
+      h('p.modal-text', {
+        text: synced
+          ? `you are ${currentUserName()}, synced. sessions you write here show up on any device you sign in from, and sessions you share are visible to the other accounts.`
+          : `you are ${currentUserName()} on the hosted copy. your notes live in this browser only — they do not follow you to another device.`,
+      }),
       size,
-      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./gate.js')).signOut() } },
+      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./api.js')).signOut() } },
         icon('back', { size: 14 }), 'sign out'),
     ),
-    h('section.gear-section',
+    synced ? null : h('section.gear-section',
       h('h3', { text: 'backup' }),
       h('p.modal-text', { text: 'a backup is the same sealed data — useless without your password, and it restores into any browser you log into. clearing your browser data wipes the notes, so keep one.' }),
       h('div', { style: { display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' } },

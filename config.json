@@ -1,0 +1,4 @@
+{
+ "api": "",
+ "_comment": "put your cloudflare worker url here (no trailing slash) to sync across devices; leave empty to keep notes in this browser only"
+}

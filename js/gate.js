@@ -2,13 +2,19 @@
 
 import { $, h, clear } from './util.js';
 import { icon } from './icons.js';
-import { loadUsers, unlock, userNames, currentUser, lock } from './vault.js';
+import { signIn, signOut as backendSignOut, mode } from './api.js';
 import { animate, EASE } from './motion.js';
 
 export function requireLogin() {
   return new Promise(async (resolve) => {
     let names = [];
-    try { await loadUsers(); names = userNames(); } catch { /* shown below */ }
+    if (mode === 'vault') {
+      try {
+        const vault = await import('./vault.js');
+        await vault.loadUsers();
+        names = vault.userNames();
+      } catch { /* shown below */ }
+    }
 
     const gate = h('div.gate');
     const user = h('input.field.gate-user', {
@@ -23,14 +29,18 @@ export function requireLogin() {
       h('div.gate-card',
         h('div.gate-mark', icon('sparkle', { size: 22 })),
         h('h1', { text: 'vodpad' }),
-        h('p.gate-sub', { text: 'your notes on this browser are encrypted. the password is the key — there is no reset.' }),
+        h('p.gate-sub', {
+          text: mode === 'cloud'
+            ? 'signed in, your sessions follow you to any device you open this on.'
+            : 'your notes on this browser are encrypted. the password is the key — there is no reset.',
+        }),
         h('datalist#gate-names', ...names.map((n) => h('option', { value: n }))),
         h('label.gate-label', { text: 'who are you' }), user,
         h('label.gate-label', { text: 'password' }), pass,
         msg,
         button,
         names.length ? h('div.gate-foot', { text: `accounts on this site: ${names.join(' · ')}` })
-                     : h('div.gate-foot.warn', { text: 'users.json is missing — this build cannot log anyone in' }),
+          : h('div.gate-foot', { text: mode === 'cloud' ? 'synced · signs you in on any device' : 'users.json is missing — this build cannot log anyone in' }),
       ),
     );
     document.body.append(gate);
@@ -49,15 +59,15 @@ export function requireLogin() {
       msg.textContent = '';
       // the derivation is deliberately slow; let the browser paint first
       await new Promise((r) => setTimeout(r, 30));
-      let ok = false;
-      try { ok = await unlock(name, secret); } catch (err) { console.error(err); }
+      let who = null, problem = null;
+      try { who = await signIn(name, secret); } catch (err) { problem = err.message; console.error(err); }
       busy = false;
       clear(button);
       button.append(icon('forward', { size: 15 }), 'unlock');
-      if (!ok) { fail('that username and password do not match'); return; }
-      localStorage.setItem('vodpad:last', currentUser());
+      if (!who) { fail(problem || 'that username and password do not match'); return; }
+      localStorage.setItem('vodpad:last', who);
       animate(gate, [{ opacity: 1 }, { opacity: 0 }], { duration: 240, easing: EASE.calm });
-      setTimeout(() => { gate.remove(); resolve(currentUser()); }, 240);
+      setTimeout(() => { gate.remove(); resolve(who); }, 240);
     };
 
     const fail = (text) => {
@@ -75,7 +85,4 @@ export function requireLogin() {
   });
 }
 
-export function signOut() {
-  lock();
-  location.reload();
-}
+export function signOut() { backendSignOut(); }

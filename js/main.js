@@ -2,7 +2,7 @@
 
 import { $, h } from './util.js';
 import { icon } from './icons.js';
-import { api, chooseBackend, isStatic } from './api.js';
+import { api, chooseBackend, isStatic, mode } from './api.js';
 import { state, bus, boot as loadState, saveNow } from './store.js';
 import { initTooltips, toast } from './ui.js';
 import { go, paintChrome, back, toggleMap } from './nav.js';
@@ -36,13 +36,18 @@ async function start() {
       return;
     }
   } else {
-    // hosted build: nothing is readable until the right password unlocks it
-    bootMsg('this copy is encrypted — sign in to open it');
-    document.getElementById('boot').classList.add('gone-quiet');
-    const { requireLogin } = await import('./gate.js');
-    const name = await requireLogin();
+    // hosted build: sign in first, either against the worker or the local vault
+    const { alreadySignedIn, whoAmI } = await import('./api.js');
+    let name = (await alreadySignedIn()) ? await whoAmI() : null;
+    if (!name) {
+      bootMsg(mode === 'cloud' ? 'sign in to load your sessions' : 'this copy is encrypted — sign in to open it');
+      document.getElementById('boot').classList.add('gone-quiet');
+      const { requireLogin } = await import('./gate.js');
+      name = await requireLogin();
+      document.getElementById('boot').classList.remove('gone-quiet');
+    }
     document.body.dataset.user = name;
-    document.getElementById('boot').classList.remove('gone-quiet');
+    document.body.dataset.mode = mode;
   }
 
   bootMsg('reading your sessions…');
