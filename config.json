@@ -1,4 +1,4 @@
 {
- "api": "",
- "_comment": "put your cloudflare worker url here (no trailing slash) to sync across devices; leave empty to keep notes in this browser only"
+ "api": "https://vodpad-sync.zevwtf.workers.dev",
+ "_comment": "empty this to go back to notes living in the browser only"
 }
