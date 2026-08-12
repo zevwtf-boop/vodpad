@@ -393,9 +393,9 @@ async function mapBackgroundMenu(e, at) {
 }
 
 async function dashMenu(at) {
-  const nav = await import('./nav.js');
   contextMenu([
     { label: 'new session', icon: 'plus', onPick: () => document.querySelector('.dash-actions .btn-primary')?.click() },
+    { label: 'import a session file', icon: 'upload', onPick: async () => (await import('./transfer.js')).pickSessionFile() },
     { label: 'search everything', icon: 'search', hint: 'ctrl+k', onPick: async () => (await import('./search.js')).openPalette() },
     { sep: true },
     { label: 'settings', icon: 'gear', onPick: async () => (await import('./settings.js')).openGear() },

@@ -90,6 +90,8 @@ function main() {
           placeholder: 'filter sessions…', value: query, spellcheck: false,
           on: { input: debounce((e) => { query = e.target.value; paintGrid(); }, 120) },
         })),
+      h('button.btn', { tip: 'bring in a .vodpad session file from another device or another person',
+        on: { click: async () => (await import('./transfer.js')).pickSessionFile() } }, icon('upload', { size: 15 }), 'import'),
       h('button.btn.btn-primary', { on: { click: newSession } }, icon('plus', { size: 15 }), 'new session')),
   ));
 
@@ -210,6 +212,9 @@ function cardMenu(meta, anchor, x, y) {
       },
     } : null,
     !synced ? { label: 'show files', icon: 'folder', onPick: () => api.reveal('board', meta.id).catch(() => {}) } : null,
+    { sep: true },
+    { label: 'export session file', icon: 'download', hint: '.vodpad', onPick: async () => (await import('./transfer.js')).exportSession(meta.id) },
+    { label: 'how do i send this to someone?', icon: 'link', onPick: async () => (await import('./transfer.js')).transferHelp() },
     mine ? { sep: true } : null,
     mine ? { label: 'delete session', icon: 'trash', danger: true, onPick: () => remove(meta) } : null,
   ].filter(Boolean), anchor ? { anchor, align: 'end' } : { x, y });

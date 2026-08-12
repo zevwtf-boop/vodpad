@@ -596,6 +596,7 @@ function pageMenu(anchor) {
     { sep: true },
     { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js')).exportMarkdown(c.id) },
     { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js')).exportHtml(c.id) },
+    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js')).exportSession(state.board.id) },
     ...(c.parent ? [{ sep: true }, { label: 'delete this page', icon: 'trash', danger: true, onPick: () => removePage(c) }] : []),
   ], { anchor, align: 'end' });
 }

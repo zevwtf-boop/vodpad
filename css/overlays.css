@@ -107,6 +107,11 @@
 .modal-head h2 { margin: 0; font-size: 14px; font-weight: 650; }
 .modal-body { padding: 18px; }
 .modal-text { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.help-box { display: flex; flex-direction: column; gap: 14px; }
+.help-row { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: start; }
+.help-row b { font-size: 12.5px; color: var(--accent); font-weight: 620; }
+.help-row span { font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+@media (max-width: 520px) { .help-row { grid-template-columns: 1fr; gap: 4px; } }
 .modal-foot {
   display: flex; justify-content: flex-end; gap: 8px;
   padding: 12px 14px;
