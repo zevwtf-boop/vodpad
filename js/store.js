@@ -1,8 +1,8 @@
 /* the single source of truth: state, mutations, undo, autosave.
    nothing renders from here — surfaces subscribe to the bus and redraw. */
 
-import { api } from './api.js';
-import { emitter, uid, debounce, stripHtml } from './util.js';
+import { api, isStatic } from './api.js?v=440f02a293';
+import { emitter, uid, debounce, stripHtml } from './util.js?v=440f02a293';
 
 export const bus = emitter();
 
@@ -156,7 +156,20 @@ function setStatus(status) {
   bus.emit('save', state.save);
 }
 
+/* saving on the way out.
+
+   visibilitychange is the only one browsers fire reliably — beforeunload is
+   skipped when a tab is discarded, and on mobile entirely. this covers all
+   three backends because it goes through the adapter like any other save. */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && state.board && state.save.status !== 'saved') saveNow();
+});
+
 window.addEventListener('beforeunload', () => {
+  // the beacon is a desktop-only extra: it posts to a relative path with no
+  // Authorization header, which only reaches the local python server. on the
+  // hosted build it would hit github pages and 404, so don't bother.
+  if (isStatic) return;
   if (state.save.status !== 'saved' && state.board) {
     navigator.sendBeacon?.(`/api/board/${state.board.id}`,
       new Blob([JSON.stringify(state.board)], { type: 'application/json' }));

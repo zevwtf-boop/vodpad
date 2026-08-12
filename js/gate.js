@@ -1,16 +1,16 @@
 /* the login screen for the hosted build. */
 
-import { $, h, clear } from './util.js';
-import { icon } from './icons.js';
-import { signIn, signOut as backendSignOut, mode } from './api.js';
-import { animate, EASE } from './motion.js';
+import { $, h, clear } from './util.js?v=440f02a293';
+import { icon } from './icons.js?v=440f02a293';
+import { signIn, signOut as backendSignOut, mode } from './api.js?v=440f02a293';
+import { animate, EASE } from './motion.js?v=440f02a293';
 
 export function requireLogin() {
   return new Promise(async (resolve) => {
     let names = [];
     if (mode === 'vault') {
       try {
-        const vault = await import('./vault.js');
+        const vault = await import('./vault.js?v=440f02a293');
         await vault.loadUsers();
         names = vault.userNames();
       } catch { /* shown below */ }

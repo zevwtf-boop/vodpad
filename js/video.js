@@ -1,12 +1,12 @@
 /* the video panel — deliberately optional. every note feature works with this
    closed; it just saves you alt-tabbing while you review. */
 
-import { $, h, clear, clamp, fmtClock, fmtBytes, parseClock } from './util.js';
-import { icon } from './icons.js';
-import { api, videoUrl } from './api.js';
-import { state, card, commit, quietly, bus } from './store.js';
-import { toast, contextMenu, promptDialog, popover, closePopover } from './ui.js';
-import { animate, EASE } from './motion.js';
+import { $, h, clear, clamp, fmtClock, fmtBytes, parseClock } from './util.js?v=440f02a293';
+import { icon } from './icons.js?v=440f02a293';
+import { api, videoUrl } from './api.js?v=440f02a293';
+import { state, card, commit, quietly, bus } from './store.js?v=440f02a293';
+import { toast, contextMenu, promptDialog, popover, closePopover } from './ui.js?v=440f02a293';
+import { animate, EASE } from './motion.js?v=440f02a293';
 
 let panel = null;
 let media = null;          // the <video> element when a local file is loaded
@@ -276,7 +276,7 @@ export function currentTime() {
 
 export async function insertTimestamp(blockId) {
   const t = currentTime();
-  const ed = await import('./editor.js');
+  const ed = await import('./editor.js?v=440f02a293');
   const body = ed.bodyOf(blockId) || ed.currentBody();
   if (!body) return;
   body.focus();
@@ -295,7 +295,7 @@ export async function insertTimestamp(blockId) {
 
 export async function stampNote() {
   if (!state.board || state.route.name !== 'page') return;
-  const ed = await import('./editor.js');
+  const ed = await import('./editor.js?v=440f02a293');
   const c = card(state.cardId);
   const last = ed.currentBlockId() || c.blocks.at(-1)?.id;
   const block = ed.insertBlock(last, { type: 'p' }, true);
@@ -317,8 +317,8 @@ export async function grabFrame() {
   const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
   if (!blob) { toast('could not grab that frame', { kind: 'error' }); return; }
   const file = new File([blob], `frame-${Math.floor(currentTime())}.png`, { type: 'image/png' });
-  const { insertImageFromFile } = await import('./images.js');
-  const ed = await import('./editor.js');
+  const { insertImageFromFile } = await import('./images.js?v=440f02a293');
+  const ed = await import('./editor.js?v=440f02a293');
   const block = await insertImageFromFile(file, ed.currentBlockId());
   if (block) {
     const t = currentTime();

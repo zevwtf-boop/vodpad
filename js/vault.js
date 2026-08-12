@@ -306,7 +306,7 @@ export function localMediaUrl(src) {
 }
 
 // hand the resolver to api.js so mediaUrl() stays synchronous everywhere else
-import('./api.js').then((m) => m.registerStaticMedia(localMediaUrl));
+import('./api.js?v=440f02a293').then((m) => m.registerStaticMedia(localMediaUrl));
 
 /* ---------------------------------------------------------------- backups
 

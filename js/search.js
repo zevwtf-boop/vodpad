@@ -1,13 +1,13 @@
 /* ctrl+k — one box for every command and every note you have ever written. */
 
-import { $, h, clear, debounce, fuzzy, highlight, stripHtml, previewOf, fmtRel } from './util.js';
-import { icon } from './icons.js';
-import { state, card, cardTitle, createBoard } from './store.js';
-import { pushLayer, dropLayer, toast } from './ui.js';
-import { popIn, popOut } from './motion.js';
-import { go, toggleMap } from './nav.js';
-import { allCards } from './corpus.js';
-import { openGear } from './settings.js';
+import { $, h, clear, debounce, fuzzy, highlight, stripHtml, previewOf, fmtRel } from './util.js?v=440f02a293';
+import { icon } from './icons.js?v=440f02a293';
+import { state, card, cardTitle, createBoard } from './store.js?v=440f02a293';
+import { pushLayer, dropLayer, toast } from './ui.js?v=440f02a293';
+import { popIn, popOut } from './motion.js?v=440f02a293';
+import { go, toggleMap } from './nav.js?v=440f02a293';
+import { allCards } from './corpus.js?v=440f02a293';
+import { openGear } from './settings.js?v=440f02a293';
 
 let close = null;
 let rows = [];
@@ -73,16 +73,16 @@ function commands() {
     } },
     { id: 'dash', title: 'go to the dashboard', sub: 'all your sessions', ico: 'home', run: () => go({ name: 'dash' }) },
     inBoard && { id: 'map', title: 'page ⇄ map', sub: 'see the sub-pages spatially', ico: 'grid', hint: 'ctrl+b', run: () => toggleMap() },
-    inBoard && { id: 'read', title: 'read mode', sub: 'the whole branch as one document', ico: 'book', hint: 'ctrl+r', run: async () => (await import('./readmode.js')).openReader() },
-    inBoard && { id: 'sub', title: 'add a sub-page', sub: 'expand on the topic you are in', ico: 'cards', run: async () => (await import('./page.js')).addSubPage(null) },
-    inBoard && { id: 'box', title: 'floating text box', sub: 'drop text anywhere on the page', ico: 'textbox', hint: 'ctrl+shift+t', run: async () => (await import('./page.js')).addFreeBox() },
-    inBoard && { id: 'video', title: 'video panel', sub: 'a recording or a youtube link', ico: 'video', hint: 'v', run: async () => (await import('./video.js')).toggleVideo() },
-    inBoard && { id: 'md', title: 'export markdown', sub: 'this page and everything under it', ico: 'download', run: async () => (await import('./exporter.js')).exportMarkdown(state.cardId) },
-    inBoard && { id: 'html', title: 'export html', sub: 'self-contained, pictures included', ico: 'download', run: async () => (await import('./exporter.js')).exportHtml(state.cardId) },
+    inBoard && { id: 'read', title: 'read mode', sub: 'the whole branch as one document', ico: 'book', hint: 'ctrl+r', run: async () => (await import('./readmode.js?v=440f02a293')).openReader() },
+    inBoard && { id: 'sub', title: 'add a sub-page', sub: 'expand on the topic you are in', ico: 'cards', run: async () => (await import('./page.js?v=440f02a293')).addSubPage(null) },
+    inBoard && { id: 'box', title: 'floating text box', sub: 'drop text anywhere on the page', ico: 'textbox', hint: 'ctrl+shift+t', run: async () => (await import('./page.js?v=440f02a293')).addFreeBox() },
+    inBoard && { id: 'video', title: 'video panel', sub: 'a recording or a youtube link', ico: 'video', hint: 'v', run: async () => (await import('./video.js?v=440f02a293')).toggleVideo() },
+    inBoard && { id: 'md', title: 'export markdown', sub: 'this page and everything under it', ico: 'download', run: async () => (await import('./exporter.js?v=440f02a293')).exportMarkdown(state.cardId) },
+    inBoard && { id: 'html', title: 'export html', sub: 'self-contained, pictures included', ico: 'download', run: async () => (await import('./exporter.js?v=440f02a293')).exportHtml(state.cardId) },
     { id: 'theme', title: 'change the theme', sub: 'colours, type, density', ico: 'palette', run: () => openGear('appearance') },
     { id: 'motion', title: 'animation settings', sub: 'full, subtle or off', ico: 'sparkle', run: () => openGear('motion') },
     { id: 'keys', title: 'keyboard shortcuts', sub: 'the whole list', ico: 'grid', run: () => openGear('keys') },
-    { id: 'files', title: 'open the notes folder', sub: 'your json + png files on disk', ico: 'folder', run: async () => (await import('./api.js')).api.reveal('data') },
+    { id: 'files', title: 'open the notes folder', sub: 'your json + png files on disk', ico: 'folder', run: async () => (await import('./api.js?v=440f02a293')).api.reveal('data') },
   ].filter(Boolean);
 }
 

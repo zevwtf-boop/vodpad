@@ -56,7 +56,7 @@ export async function chooseBackend() {
   let config = null;
   try { config = await (await fetch('config.json', { cache: 'no-store' })).json(); } catch { /* optional */ }
   if (config && config.api) {
-    const cloud = await import('./cloud.js');
+    const cloud = await import('./cloud.js?v=440f02a293');
     cloud.configure(config.api);
     api = cloud.cloudApi;
     registerStaticMedia(cloud.cloudMediaUrl);
@@ -65,7 +65,7 @@ export async function chooseBackend() {
   }
 
   // 3. otherwise everything stays in this browser, encrypted
-  const vault = await import('./vault.js');
+  const vault = await import('./vault.js?v=440f02a293');
   api = vault.localApi;
   registerStaticMedia(vault.localMediaUrl);
   mode = 'vault';
@@ -76,29 +76,29 @@ export async function chooseBackend() {
 
 export async function alreadySignedIn() {
   if (mode !== 'cloud') return false;
-  const cloud = await import('./cloud.js');
+  const cloud = await import('./cloud.js?v=440f02a293');
   return cloud.resume();
 }
 
 export async function signIn(name, password) {
   if (mode === 'cloud') {
-    const cloud = await import('./cloud.js');
+    const cloud = await import('./cloud.js?v=440f02a293');
     await cloud.login(name, password);
     return cloud.cloudUser();
   }
-  const vault = await import('./vault.js');
+  const vault = await import('./vault.js?v=440f02a293');
   return (await vault.unlock(name, password)) ? vault.currentUser() : null;
 }
 
 export async function signOut() {
-  if (mode === 'cloud') (await import('./cloud.js')).logout();
-  else (await import('./vault.js')).lock();
+  if (mode === 'cloud') (await import('./cloud.js?v=440f02a293')).logout();
+  else (await import('./vault.js?v=440f02a293')).lock();
   location.reload();
 }
 
 export async function whoAmI() {
-  if (mode === 'cloud') return (await import('./cloud.js')).cloudUser();
-  if (mode === 'vault') return (await import('./vault.js')).currentUser();
+  if (mode === 'cloud') return (await import('./cloud.js?v=440f02a293')).cloudUser();
+  if (mode === 'vault') return (await import('./vault.js?v=440f02a293')).currentUser();
   return null;
 }
 

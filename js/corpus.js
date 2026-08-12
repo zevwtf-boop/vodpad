@@ -1,8 +1,8 @@
 /* a cached copy of every session document, so the dashboard drill list and
    the global search don't refetch the world on every keystroke. */
 
-import { api } from './api.js';
-import { state, bus } from './store.js';
+import { api } from './api.js?v=440f02a293';
+import { state, bus } from './store.js?v=440f02a293';
 
 let cache = null;
 let stamp = 0;

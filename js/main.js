@@ -1,21 +1,21 @@
 /* boot: wake the server, load settings, paint the first surface. */
 
-import { $, h } from './util.js';
-import { icon } from './icons.js';
-import { api, chooseBackend, isStatic, mode } from './api.js';
-import { state, bus, boot as loadState, saveNow } from './store.js';
-import { initTooltips, toast } from './ui.js';
-import { go, paintChrome, back, toggleMap } from './nav.js';
-import { applySettings, openGear } from './settings.js';
-import { installKeys } from './keys.js';
-import { installContextMenus } from './menus.js';
-import { openPalette } from './search.js';
-import { openReader } from './readmode.js';
-import { toggleVideo } from './video.js';
+import { $, h } from './util.js?v=440f02a293';
+import { icon } from './icons.js?v=440f02a293';
+import { api, chooseBackend, isStatic, mode } from './api.js?v=440f02a293';
+import { state, bus, boot as loadState, saveNow } from './store.js?v=440f02a293';
+import { initTooltips, toast } from './ui.js?v=440f02a293';
+import { go, paintChrome, back, toggleMap } from './nav.js?v=440f02a293';
+import { applySettings, openGear } from './settings.js?v=440f02a293';
+import { installKeys } from './keys.js?v=440f02a293';
+import { installContextMenus } from './menus.js?v=440f02a293';
+import { openPalette } from './search.js?v=440f02a293';
+import { openReader } from './readmode.js?v=440f02a293';
+import { toggleVideo } from './video.js?v=440f02a293';
 
-import './dashboard.js';
-import './canvas.js';
-import './page.js';
+import './dashboard.js?v=440f02a293';
+import './canvas.js?v=440f02a293';
+import './page.js?v=440f02a293';
 
 const bootMsg = (text) => { const el = $('#boot-msg'); if (el) el.textContent = text; };
 
@@ -37,12 +37,12 @@ async function start() {
     }
   } else {
     // hosted build: sign in first, either against the worker or the local vault
-    const { alreadySignedIn, whoAmI } = await import('./api.js');
+    const { alreadySignedIn, whoAmI } = await import('./api.js?v=440f02a293');
     let name = (await alreadySignedIn()) ? await whoAmI() : null;
     if (!name) {
       bootMsg(mode === 'cloud' ? 'sign in to load your sessions' : 'this copy is encrypted — sign in to open it');
       document.getElementById('boot').classList.add('gone-quiet');
-      const { requireLogin } = await import('./gate.js');
+      const { requireLogin } = await import('./gate.js?v=440f02a293');
       name = await requireLogin();
       document.getElementById('boot').classList.remove('gone-quiet');
     }
