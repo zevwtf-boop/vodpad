@@ -42,7 +42,7 @@ const ACCENTS = [
 
 export function applySettings(s = state.settings) {
   const root = document.documentElement;
-  root.dataset.theme = s.theme || 'night-lilac';
+  root.dataset.theme = s.theme || 'ember';
   root.dataset.motion = s.motion || 'full';
   root.dataset.density = s.density || 'comfortable';
   root.dataset.font = s.font || 'sans';

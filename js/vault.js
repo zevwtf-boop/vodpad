@@ -16,6 +16,14 @@ const DB_NAME = 'vodpad-web';
 const STORE = 'kv';
 const ITERATIONS = 600000;
 
+/* same starting point as the desktop build */
+const DEFAULT_SETTINGS = {
+  theme: 'ember', accent: '', font: 'sans', textSize: 16, lineHeight: 1.65,
+  pageWidth: 76, density: 'comfortable', radius: 14, motion: 'full', motionSpeed: 1,
+  spellcheck: true, markdownShortcuts: true, autosaveMs: 400,
+  gridSnap: true, snapSize: 8, lodThreshold: 0.42, sidebar: true, focusMode: false,
+};
+
 let users = null;          // from users.json
 let who = null;            // logged-in username
 let key = null;            // aes-gcm CryptoKey, memory only
@@ -252,7 +260,7 @@ export const localApi = {
 
   async settings() {
     const rec = await get(mine('settings'));
-    return rec ? await unsealJson(rec) : {};
+    return { ...DEFAULT_SETTINGS, ...(rec ? await unsealJson(rec) : {}) };
   },
 
   async saveSettings(patch) {
