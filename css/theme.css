@@ -1,0 +1,216 @@
+/* ------------------------------------------------------------------
+   vodpad theme layer — every colour is a variable, so switching a
+   theme is just swapping a variable set. no reload, no flash.
+   ------------------------------------------------------------------ */
+
+/* --- real typefaces, bundled in the folder so they work offline ---
+   inter for the interface, source serif for reading, jetbrains mono for code. */
+
+@font-face { font-family: Inter; src: url('../fonts/inter-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: Inter; src: url('../fonts/inter-latin-500-normal.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: Inter; src: url('../fonts/inter-latin-600-normal.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: Inter; src: url('../fonts/inter-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: Inter; src: url('../fonts/inter-latin-400-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+
+@font-face { font-family: 'Source Serif 4'; src: url('../fonts/source-serif-4-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Source Serif 4'; src: url('../fonts/source-serif-4-latin-600-normal.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Source Serif 4'; src: url('../fonts/source-serif-4-latin-400-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+
+@font-face { font-family: 'JetBrains Mono'; src: url('../fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+
+:root {
+  /* --- surfaces (night lilac, the default) --- */
+  --bg-0: #0b0714;
+  --bg-1: #150c26;
+  --bg-2: #1e1235;
+  --bg-3: #2a1a4a;
+  --bg-4: #34215c;
+  --line: #3a2560;
+  --line-soft: #281a45;
+
+  /* --- ink --- */
+  --text: #ece6f7;
+  --muted: #9d90b8;
+  --faint: #6f6490;
+
+  /* --- accent family --- */
+  --accent: #c9a7ff;
+  --accent-dim: #8f6fd0;
+  --accent-deep: #5b2fa8;
+  --accent-ink: #14082a;
+
+  /* --- severity / "harder things" --- */
+  --sev-1: #ffb454;
+  --sev-2: #ff6b8a;
+  --sev-3: #6ee7c0;
+
+  /* --- paper (the doc surface) --- */
+  --paper: #150d27;
+  --paper-edge: #2b1c4c;
+
+  /* --- derived --- */
+  --glow: color-mix(in srgb, var(--accent) 18%, transparent);
+  --glow-soft: color-mix(in srgb, var(--accent) 10%, transparent);
+  --sel-bg: color-mix(in srgb, var(--accent) 30%, transparent);
+  --hair: color-mix(in srgb, var(--line) 65%, transparent);
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-2: 0 8px 24px -10px rgba(0,0,0,.65), 0 1px 0 rgba(255,255,255,.03) inset;
+  --shadow-3: 0 26px 60px -22px rgba(0,0,0,.85), 0 1px 0 rgba(255,255,255,.05) inset;
+  --shadow-pop: 0 18px 44px -16px rgba(0,0,0,.8);
+
+  /* --- shape / rhythm (settings can override) --- */
+  --radius: 14px;
+  --radius-sm: 9px;
+  --radius-lg: 20px;
+  --pad: 16px;
+  --row: 34px;
+
+  /* --- type --- */
+  --font-ui: Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-doc: var(--font-ui);
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+  --font-serif: "Source Serif 4", Georgia, "Iowan Old Style", serif;
+  --text-size: 16px;
+  --line-height: 1.65;
+  --page-width: 76ch;
+  --track-tight: -0.021em;   /* headings */
+  --track-body: -0.008em;    /* running text */
+
+  /* --- motion vocabulary --- */
+  --m: 1;
+  --d1: calc(120ms * var(--m));
+  --d2: calc(200ms * var(--m));
+  --d3: calc(320ms * var(--m));
+  --d4: calc(480ms * var(--m));
+  --ease-emph: cubic-bezier(.22,.61,.36,1);
+  --ease-snap: cubic-bezier(.34,1.56,.64,1);
+  --ease-calm: cubic-bezier(.33,0,.2,1);
+
+  color-scheme: dark;
+}
+
+/* ---------------- theme presets ---------------- */
+
+:root[data-theme="ember"] {
+  --bg-0: #0a0608; --bg-1: #150a0d; --bg-2: #1d0f13; --bg-3: #2b161c; --bg-4: #3a1e26;
+  --line: #4a232d; --line-soft: #2f1419;
+  --text: #f8ebed; --muted: #bd989e; --faint: #8c6a71;
+  --accent: #ff4d5e; --accent-dim: #c53a49; --accent-deep: #8e1f2d; --accent-ink: #1b0508;
+  --sev-1: #ffc357; --sev-2: #ff8a3d; --sev-3: #4fd1a5;
+  --paper: #150b0e; --paper-edge: #37191f;
+}
+
+:root[data-theme="ash"] {
+  --bg-0: #08080a; --bg-1: #101012; --bg-2: #17171a; --bg-3: #222226; --bg-4: #2e2e34;
+  --line: #33333a; --line-soft: #222226;
+  --text: #f0eef0; --muted: #9b9598; --faint: #6d686b;
+  --accent: #ff3b46; --accent-dim: #b82b34; --accent-deep: #7c1a20; --accent-ink: #14090a;
+  --sev-1: #ffc357; --sev-2: #ff8a3d; --sev-3: #4fd1a5;
+  --paper: #121214; --paper-edge: #292930;
+}
+
+/* --- the hud / cheat-menu family: one hot colour, everything else near-black --- */
+
+:root[data-theme="aimbot"] {
+  --bg-0: #040706; --bg-1: #0a1210; --bg-2: #0f1a16; --bg-3: #17271f; --bg-4: #1f342a;
+  --line: #1e3a2c; --line-soft: #142219;
+  --text: #e9fff4; --muted: #8fb6a3; --faint: #628572;
+  --accent: #39ff9e; --accent-dim: #23b06d; --accent-deep: #0d6b41; --accent-ink: #03150c;
+  --sev-1: #ffe34d; --sev-2: #ff4f6d; --sev-3: #4de3ff;
+  --paper: #08100d; --paper-edge: #1b3227;
+}
+
+:root[data-theme="esp"] {
+  --bg-0: #03060c; --bg-1: #081320; --bg-2: #0c1a2b; --bg-3: #142a42; --bg-4: #1c3a58;
+  --line: #1d3e5e; --line-soft: #112436;
+  --text: #e6f7ff; --muted: #8bb2cc; --faint: #5d8299;
+  --accent: #00e5ff; --accent-dim: #049fb4; --accent-deep: #06596b; --accent-ink: #001318;
+  --sev-1: #ffcc33; --sev-2: #ff3d81; --sev-3: #52ff9a;
+  --paper: #07131f; --paper-edge: #17334c;
+}
+
+:root[data-theme="chams"] {
+  --bg-0: #08040e; --bg-1: #120a1e; --bg-2: #1a0f2b; --bg-3: #281844; --bg-4: #362159;
+  --line: #3d2263; --line-soft: #241239;
+  --text: #f8e9ff; --muted: #b394cc; --faint: #806699;
+  --accent: #ff2fd6; --accent-dim: #b81f9c; --accent-deep: #6c1160; --accent-ink: #16021a;
+  --sev-1: #ffd24d; --sev-2: #ff5252; --sev-3: #46f5c8;
+  --paper: #120a1f; --paper-edge: #2d1a49;
+}
+
+:root[data-theme="tracer"] {
+  --bg-0: #0a0603; --bg-1: #150c05; --bg-2: #1e1109; --bg-3: #2e1c0e; --bg-4: #3d2713;
+  --line: #472c14; --line-soft: #2b1a0c;
+  --text: #fff1e2; --muted: #c0a186; --faint: #8d735d;
+  --accent: #ff8a00; --accent-dim: #c26800; --accent-deep: #7d3f00; --accent-ink: #180a00;
+  --sev-1: #ffd93d; --sev-2: #ff4242; --sev-3: #57e08a;
+  --paper: #150d06; --paper-edge: #38230f;
+}
+
+:root[data-theme="wallhack"] {
+  --bg-0: #04060f; --bg-1: #0a0f1f; --bg-2: #0f162c; --bg-3: #182243; --bg-4: #212e5a;
+  --line: #24325f; --line-soft: #151d38;
+  --text: #e8ecff; --muted: #9aa6d6; --faint: #6b76a3;
+  --accent: #4d7cff; --accent-dim: #3457c4; --accent-deep: #1c2f7a; --accent-ink: #030718;
+  --sev-1: #ffc94d; --sev-2: #ff5470; --sev-3: #4ce0b3;
+  --paper: #0a0f22; --paper-edge: #1d2850;
+}
+
+:root[data-theme="deep-plum"] {
+  --bg-0: #120818; --bg-1: #1d0e28; --bg-2: #281337; --bg-3: #351a48; --bg-4: #422159;
+  --line: #4a2464; --line-soft: #331845;
+  --text: #f3e9fb; --muted: #ab93bd; --faint: #7b6489;
+  --accent: #dba7ff; --accent-dim: #a071c6; --accent-deep: #71309e; --accent-ink: #1c0a26;
+  --paper: #1c0f28; --paper-edge: #3a1e4f;
+}
+
+:root[data-theme="midnight"] {
+  --bg-0: #080b18; --bg-1: #101529; --bg-2: #171d36; --bg-3: #202949; --bg-4: #2a355c;
+  --line: #2c375e; --line-soft: #1e2545;
+  --text: #e6ebfa; --muted: #8e99bd; --faint: #626d91;
+  --accent: #a9b8ff; --accent-dim: #7787d6; --accent-deep: #3b46a8; --accent-ink: #080c1f;
+  --paper: #111730; --paper-edge: #232c50;
+}
+
+:root[data-theme="obsidian"] {
+  --bg-0: #0a0a0d; --bg-1: #121216; --bg-2: #18181e; --bg-3: #222229; --bg-4: #2c2c35;
+  --line: #2e2e38; --line-soft: #212128;
+  --text: #ececf1; --muted: #94949f; --faint: #6a6a75;
+  --accent: #c9a7ff; --accent-dim: #9077c0; --accent-deep: #5a3b93; --accent-ink: #0d0a14;
+  --paper: #141419; --paper-edge: #26262f;
+}
+
+:root[data-theme="nocturne"] {
+  --bg-0: #100813; --bg-1: #1c0f21; --bg-2: #26152d; --bg-3: #341d3e; --bg-4: #43264f;
+  --line: #4a2a55; --line-soft: #321c3b;
+  --text: #f6e9f4; --muted: #b394ac; --faint: #83687d;
+  --accent: #ff9ecf; --accent-dim: #c86fa2; --accent-deep: #8f3268; --accent-ink: #21091a;
+  --sev-3: #7fe3c8;
+  --paper: #1e1023; --paper-edge: #3c2246;
+}
+
+/* ---------------- motion levels ---------------- */
+
+:root[data-motion="subtle"] { --m: .62; }
+:root[data-motion="off"]    { --m: .001; }
+
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important;
+}
+
+/* ---------------- density ---------------- */
+
+:root[data-density="compact"] {
+  --pad: 11px;
+  --row: 29px;
+  --line-height: 1.5;
+}
+
+/* ---------------- type presets ---------------- */
+
+:root[data-font="serif"] { --font-doc: var(--font-serif); --track-body: 0; }
+:root[data-font="mono"]  { --font-doc: var(--font-mono); --track-body: 0; }

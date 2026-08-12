@@ -1,0 +1,29 @@
+{
+ "iterations": 600000,
+ "users": [
+  {
+   "name": "trickfnq",
+   "salt": "gn1hopQTd/FILx6zLnYPRw==",
+   "check": {
+    "iv": "T9tL9pFMkWTaqW8M",
+    "ct": "XsQRm8PLB2PxvaR9f0Sw9pujVk89pw=="
+   }
+  },
+  {
+   "name": "Chrisfv7",
+   "salt": "tG9X6f9MzgQJ8U5dBT7pxg==",
+   "check": {
+    "iv": "9ms7GTtgTjVwPJGA",
+    "ct": "FH/ltF57nNeIACSFT7Wp/AZmBV6aZg=="
+   }
+  },
+  {
+   "name": "devoxbl",
+   "salt": "MVi9tKCCjpU+z/uOr8ZzdA==",
+   "check": {
+    "iv": "f1ChJv4Gad0/GQz6",
+    "ct": "q84oVTKNf///6zxIKcUUeblEuqLKuA=="
+   }
+  }
+ ]
+}
