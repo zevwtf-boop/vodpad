@@ -1,11 +1,11 @@
 /* turning a page (and everything nested under it) into a clean document —
    used by read mode, by markdown/html export, and by print-to-pdf. */
 
-import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=440f02a293';
-import { mediaUrl } from './api.js?v=440f02a293';
-import { state, card, childrenOf, cardTitle } from './store.js?v=440f02a293';
-import { paintStrokes } from './images.js?v=440f02a293';
-import { toast } from './ui.js?v=440f02a293';
+import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=58e76add28';
+import { mediaUrl } from './api.js?v=58e76add28';
+import { state, card, childrenOf, cardTitle } from './store.js?v=58e76add28';
+import { paintStrokes } from './images.js?v=58e76add28';
+import { toast } from './ui.js?v=58e76add28';
 
 /* ---------------------------------------------------------------- dom render */
 

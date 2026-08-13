@@ -2,18 +2,18 @@
    a main column, a margin gutter for side notes, and a free layer you can
    drop text anywhere on. */
 
-import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=440f02a293';
-import { icon } from './icons.js?v=440f02a293';
-import { mediaUrl } from './api.js?v=440f02a293';
-import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting } from './store.js?v=440f02a293';
-import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=440f02a293';
-import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=440f02a293';
-import { initSelectionToolbar } from './toolbar.js?v=440f02a293';
-import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=440f02a293';
-import { stagger, animate, ping, EASE } from './motion.js?v=440f02a293';
-import { paintAnchors } from './anchors.js?v=440f02a293';
-import { mountVideoPanel } from './video.js?v=440f02a293';
-import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=440f02a293';
+import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=58e76add28';
+import { icon } from './icons.js?v=58e76add28';
+import { mediaUrl } from './api.js?v=58e76add28';
+import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting } from './store.js?v=58e76add28';
+import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=58e76add28';
+import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=58e76add28';
+import { initSelectionToolbar } from './toolbar.js?v=58e76add28';
+import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=58e76add28';
+import { stagger, animate, ping, EASE } from './motion.js?v=58e76add28';
+import { paintAnchors } from './anchors.js?v=58e76add28';
+import { mountVideoPanel } from './video.js?v=58e76add28';
+import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=58e76add28';
 
 let host = null;
 let sheet = null;
@@ -211,6 +211,9 @@ export function render() {
   const c = card(state.cardId);
   if (!c) return;
 
+  // the tag fade belongs to the page you set it on, not to the next one
+  if (dimCard !== c.id) { tagDim = new Set(); dimCard = c.id; }
+
   clear(host);
   const shell = h('div.page-shell');
   if (state.settings.sidebar === false) shell.classList.add('side-closed');
@@ -278,21 +281,33 @@ function svgLayer() {
 
 /* ---------------------------------------------------------------- left rail
 
-   outline to navigate a long page, a strip of every picture on it, and a
-   grid of things to add — so nothing important is hidden behind a keystroke.
+   six ways to read the same page: its outline, its pictures, its timestamps,
+   its flagged notes, its tags, and a grid of things to add. six labels do not
+   fit in a 244px rail, so the tabs are icons and the body says which one you
+   are on — nothing important is hidden behind a keystroke or a hover.
 */
+
+const SIDE_TABS = [
+  ['outline', 'outline', 'listUl', 'headings and sub-pages, in order'],
+  ['shots', 'pictures', 'image', 'every picture on this page'],
+  ['timeline', 'timeline', 'clock', 'every timestamp — click one to jump the vod'],
+  ['drills', 'drills', 'drill', 'every flagged note, worst first'],
+  ['tags', 'tags', 'tag', 'click a tag and the rest of the page fades back'],
+  ['add', 'add', 'plus', 'drop something into the page'],
+];
 
 let sideTab = 'outline';
 
 function sideBar() {
+  if (SIDE_TABS.some(([id]) => id === state.settings.sideTab)) sideTab = state.settings.sideTab;
+
   const aside = h('aside.page-side',
     h('div.side-head',
       h('div.side-tabs',
-        ...[['outline', 'outline', 'listUl'], ['shots', 'pictures', 'image'], ['add', 'add', 'plus']]
-          .map(([id, label, ico]) => h('button.side-tab', {
-            class: sideTab === id ? 'on' : '', tip: label, data: { tab: id },
-            on: { click: () => { sideTab = id; paintSide(); } },
-          }, icon(ico, { size: 15 }), h('span', { text: label })))),
+        ...SIDE_TABS.map(([id, label, ico, blurb]) => h('button.side-tab', {
+          class: sideTab === id ? 'on' : '', tip: `${label} — ${blurb}`, data: { tab: id },
+          on: { click: () => pickSideTab(id) },
+        }, icon(ico, { size: 15 })))),
       h('button.icon-btn.side-collapse', {
         tip: 'hide this panel · ctrl+\\',
         on: { click: () => toggleSidebar() },
@@ -303,6 +318,15 @@ function sideBar() {
   requestAnimationFrame(paintSide);
   setTimeout(paintSide, 0);
   return aside;
+}
+
+/** switch tabs, move the lit pill with it, and remember the choice for next time */
+export function pickSideTab(id) {
+  if (sideTab === 'tags' && id !== 'tags') clearTagDim();
+  sideTab = id;
+  setSetting('sideTab', id);
+  for (const btn of $$('.side-tab')) btn.classList.toggle('on', btn.dataset.tab === id);
+  paintSide();
 }
 
 export function toggleFocusMode() {
@@ -328,10 +352,17 @@ export function paintSide() {
   const c = card(state.cardId);
   if (!c) return;
 
+  const tab = SIDE_TABS.find(([id]) => id === sideTab) || SIDE_TABS[0];
+  body.append(h('div.side-cap', h('b', { text: tab[1] }), h('span', { text: tab[3] })));
+
   if (sideTab === 'outline') paintOutline(body, c);
   else if (sideTab === 'shots') paintShots(body, c);
+  else if (sideTab === 'timeline') paintTimeline(body, c);
+  else if (sideTab === 'drills') paintDrills(body, c);
+  else if (sideTab === 'tags') paintTags(body, c);
   else paintAddPalette(body, c);
 
+  applyTagDim();
   paintStats();
 }
 
@@ -377,7 +408,7 @@ function paintShots(body, c) {
   if (!shots.length) {
     body.append(h('div.side-empty',
       h('p', { text: 'paste a screenshot with ctrl+v and it lands here.' }),
-      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=440f02a293')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=58e76add28')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
         icon('image', { size: 13 }), 'add a picture')));
     return;
   }
@@ -393,12 +424,254 @@ function paintShots(body, c) {
   body.append(grid);
 }
 
+/* ---------------------------------------------------------------- timeline
+
+   every timestamp on the page in one column. a stamp is an inline chip in some
+   block's html, or a sub-page pinned to a moment — both end up here, sorted,
+   and clicking one seeks the vod and walks you to where the note lives.
+*/
+
+const CHIP_RE = /<span[^>]*\bdata-t="([\d.]+)"[^>]*>[\s\S]*?<\/span>/gi;
+
+const tidy = (html, cap = 90) => {
+  const text = stripHtml(String(html || '')).replace(/\s+/g, ' ').trim();
+  return text.length > cap ? `${text.slice(0, cap)}…` : text;
+};
+
+/** pull every stamp out of one chunk of html, each with the words that follow it */
+function stampsIn(html) {
+  const src = String(html || '');
+  const spans = [];
+  CHIP_RE.lastIndex = 0;
+  for (let m = CHIP_RE.exec(src); m; m = CHIP_RE.exec(src)) {
+    if (spans.length) spans[spans.length - 1].to = m.index;
+    spans.push({ t: Number(m[1]), from: m.index + m[0].length, to: src.length });
+  }
+  const whole = tidy(src.replace(CHIP_RE, ' '));
+  return spans.map((s) => ({ t: s.t, text: tidy(src.slice(s.from, s.to)) || whole }));
+}
+
+function timelineRows(c) {
+  const rows = [];
+  const take = (html, kind, ref) => {
+    for (const s of stampsIn(html)) rows.push({ ...s, kind, ref });
+  };
+
+  for (const block of c.blocks || []) {
+    take(block.html, 'block', block.id);
+    if (block.caption) take(block.caption, 'block', block.id);
+  }
+  for (const note of c.side || []) take(note.html, 'side', note.id);
+  for (const box of c.free || []) take(box.html, 'free', box.id);
+  for (const kid of childrenOf(c.id)) {
+    if (kid.t === null || kid.t === undefined) continue;
+    rows.push({ t: Number(kid.t), text: cardTitle(kid), kind: 'card', ref: kid.id });
+  }
+
+  return rows.filter((r) => Number.isFinite(r.t)).sort((a, b) => a.t - b.t);
+}
+
+function paintTimeline(body, c) {
+  const rows = timelineRows(c);
+  if (!rows.length) {
+    body.append(h('div.side-empty',
+      h('p', { text: 'press t while the vod plays and the moment lands here.' }),
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./video.js?v=58e76add28')).insertTimestamp(currentBlockId() || c.blocks.at(-1)?.id) } },
+        icon('clock', { size: 13 }), 'stamp this moment')));
+    return;
+  }
+
+  const list = h('div.side-list');
+  for (const row of rows) {
+    list.append(h('button.side-row.tl-row', {
+      tip: row.text || fmtClock(row.t),
+      on: { click: () => goToStamp(row) },
+    },
+      h('span.tl-t', { text: fmtClock(row.t) }),
+      h('span.side-text', { text: row.text || 'no words on this one' }),
+      row.kind === 'card' ? h('span.side-ico', icon('cards', { size: 12 })) : null));
+  }
+  body.append(list);
+  body.append(h('div.side-foot',
+    h('button.btn.btn-sm.btn-ghost', {
+      tip: 'every stamp as plain lines, for an editor',
+      on: { click: () => copyClipList(rows) },
+    }, icon('copy', { size: 13 }), 'copy as a clip list')));
+}
+
+async function goToStamp(row) {
+  try { (await import('./video.js?v=58e76add28')).seekTo(row.t); } catch { /* no video panel is fine */ }
+  if (row.kind === 'card') { openCardPage(row.ref); return; }
+  if (row.kind === 'block') { jumpToBlock(row.ref); return; }
+  const el = $(row.kind === 'side' ? `.sidenote[data-id="${CSS.escape(row.ref)}"]` : `.freebox[data-id="${CSS.escape(row.ref)}"]`);
+  if (!el) return;
+  ensureVisible(el, { margin: 160 });
+  ping(el);
+}
+
+async function copyClipList(rows) {
+  const text = rows.map((r) => `${fmtClock(r.t)} ${r.text}`.trim()).join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`${rows.length} timestamp${rows.length === 1 ? '' : 's'} copied`, { kind: 'ok', ms: 1800 });
+  } catch {
+    toast('the browser would not hand over the clipboard', { kind: 'warn' });
+  }
+}
+
+/* ---------------------------------------------------------------- drills
+
+   the flagged notes on this page and everything nested under it, worst first.
+   same severities as the dashboard drill list, scoped to where you are.
+*/
+
+const SEV_LABEL = ['no flag', 'working on it', 'costs me games', 'fixed — keep doing it'];
+const SEV_ORDER = [2, 1, 3];
+
+function subtreeOf(id) {
+  const out = [];
+  (function walk(cid) {
+    const c = card(cid);
+    if (!c) return;
+    out.push(c);
+    for (const kid of c.children || []) walk(kid);
+  })(id);
+  return out;
+}
+
+function paintDrills(body, c) {
+  const flagged = subtreeOf(c.id).filter((x) => (x.severity || 0) > 0);
+
+  if (!flagged.length) {
+    body.append(h('div.side-empty',
+      h('p', { text: 'flag a page with the dots at the top of it — or press 1 to 4 — and it shows up here.' })));
+    return;
+  }
+
+  for (const lvl of SEV_ORDER) {
+    const rows = flagged.filter((x) => (x.severity || 0) === lvl);
+    if (!rows.length) continue;
+
+    body.append(h('div.side-group',
+      h('span.sev-dot', { class: `sev-${lvl}` }),
+      h('span.side-text', { text: SEV_LABEL[lvl] }),
+      h('span.side-count', { text: String(rows.length) })));
+
+    const list = h('div.side-list');
+    for (const row of rows) {
+      const preview = tidy((row.blocks || []).map((b) => b.html).join(' '), 70);
+      list.append(h('button.side-row.dr-row', {
+        class: row.id === c.id ? 'here' : '',
+        on: { click: () => (row.id === c.id ? ping(sheet) : openCardPage(row.id)) },
+      },
+        h('span.dr-bar', { class: `sev-${lvl}` }),
+        h('span.dr-meat',
+          h('span.dr-title', { text: cardTitle(row) + (row.id === c.id ? ' — this page' : '') }),
+          preview ? h('span.dr-preview', { text: preview }) : null)));
+    }
+    body.append(list);
+  }
+}
+
+/* ---------------------------------------------------------------- tags
+
+   every tag on this page and its sub-pages. clicking one fades back everything
+   that does not carry it — the same idea as the map's filter, but in place, so
+   you do not lose your spot on the plane.
+*/
+
+let tagDim = new Set();
+let dimCard = null;
+
+/** does this text carry #tag as a whole word? */
+function carriesTag(text, tag) {
+  const hay = String(text || '').toLowerCase();
+  const needle = `#${tag}`;
+  for (let i = hay.indexOf(needle); i !== -1; i = hay.indexOf(needle, i + 1)) {
+    const after = hay[i + needle.length];
+    if (!after || !/[a-z0-9_-]/.test(after)) return true;
+  }
+  return false;
+}
+
+const carriesAll = (text) => [...tagDim].every((t) => carriesTag(text, t));
+
+export function clearTagDim() {
+  if (!tagDim.size) return;
+  tagDim = new Set();
+  applyTagDim();
+}
+
+/** paint the fade. reads the rendered text, so it is always in step with the dom */
+function applyTagDim() {
+  if (!sheet) return;
+  const on = tagDim.size > 0;
+  sheet.classList.toggle('tag-dim', on);
+
+  for (const el of [...$$('.page-main .blk'), ...$$('#page-free > .blk')]) {
+    el.classList.toggle('tag-out', on && !carriesAll(el.textContent));
+  }
+  for (const el of $$('.sidenote')) el.classList.toggle('tag-out', on && !carriesAll(el.textContent));
+  for (const el of $$('#page-free > .freebox')) el.classList.toggle('tag-out', on && !carriesAll(el.textContent));
+  for (const el of $$('.kid-card')) {
+    const kid = card(el.dataset.id);
+    el.classList.toggle('tag-out', on && !(kid && [...tagDim].every((t) => (kid.tags || []).includes(t))));
+  }
+}
+
+function pageTagCounts(c) {
+  const counts = new Map();
+  for (const x of subtreeOf(c.id)) {
+    for (const tag of x.tags || []) counts.set(tag, (counts.get(tag) || 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+function paintTags(body, c) {
+  const counts = pageTagCounts(c);
+  if (!counts.length) {
+    body.append(h('div.side-empty',
+      h('p', { text: 'write #greedy-loot anywhere on the page, or use the + beside the title.' })));
+    return;
+  }
+
+  const wrap = h('div.side-tags');
+  for (const [tag, n] of counts) {
+    wrap.append(h('button.chip.chip-tag.side-tag', {
+      class: tagDim.has(tag) ? 'on' : '',
+      on: {
+        click: () => {
+          if (tagDim.has(tag)) tagDim.delete(tag); else tagDim.add(tag);
+          applyTagDim();
+          paintSide();
+        },
+      },
+    }, h('span', { text: tag }), h('span.side-count', { text: String(n) })));
+  }
+  body.append(wrap);
+
+  if (tagDim.size) {
+    body.append(h('div.side-foot',
+      h('button.btn.btn-sm.btn-ghost', { on: { click: () => { clearTagDim(); paintSide(); } } },
+        icon('close', { size: 13 }), 'show everything again'),
+      h('button.btn.btn-sm.btn-ghost', {
+        tip: 'the same filter, on the map',
+        on: {
+          click: () => {
+            state.filter.tags = new Set(tagDim);
+            go({ name: 'board', boardId: state.board.id, cardId: state.cardId });
+          },
+        },
+      }, icon('grid', { size: 13 }), 'see these on the map')));
+  }
+}
+
 function paintAddPalette(body, c) {
   const lastId = () => card(state.cardId).blocks.at(-1)?.id;
   const at = () => currentBlockId() || lastId();
 
   const add = async (type, extra) => {
-    const ed = await import('./editor.js?v=440f02a293');
+    const ed = await import('./editor.js?v=58e76add28');
     const made = ed.insertBlock(at(), { type: 'p' }, false);
     if (type === 'p') { ed.focusBlock(made.id, 'end'); return; }
     ed.setType(made.id, type, extra);
@@ -416,11 +689,11 @@ function paintAddPalette(body, c) {
     ['code', 'codeTag', () => add('code')],
     ['divider', 'divider', () => add('divider')],
     ['table', 'table', () => add('table', { rows: [['', '', ''], ['', '', ''], ['', '', '']], header: true })],
-    ['picture', 'image', async () => (await import('./images.js?v=440f02a293')).pickImageFile(at())],
+    ['picture', 'image', async () => (await import('./images.js?v=58e76add28')).pickImageFile(at())],
     ['text box', 'textbox', () => addFreeBox()],
     ['margin note', 'sidenote', () => addSidenoteFromSelection()],
     ['sub-page', 'cards', () => addSubPage(at())],
-    ['timestamp', 'clock', async () => (await import('./video.js?v=440f02a293')).insertTimestamp(at())],
+    ['timestamp', 'clock', async () => (await import('./video.js?v=58e76add28')).insertTimestamp(at())],
   ];
 
   body.append(h('div.side-grid', ...items.map(([label, ico, run]) => h('button.side-add', {
@@ -466,7 +739,7 @@ export function markOutlinePosition() {
 }
 
 async function addHeading() {
-  const ed = await import('./editor.js?v=440f02a293');
+  const ed = await import('./editor.js?v=58e76add28');
   const last = card(state.cardId).blocks.at(-1)?.id;
   const made = ed.insertBlock(last, { type: 'p' }, false);
   ed.setType(made.id, 'h2');
@@ -527,7 +800,7 @@ function paintMeta() {
   if (c.t !== null && c.t !== undefined) {
     wrap.append(h('button.chip.chip-time', {
       tip: 'jump the video here',
-      on: { click: async () => (await import('./video.js?v=440f02a293')).seekTo(c.t) },
+      on: { click: async () => (await import('./video.js?v=58e76add28')).seekTo(c.t) },
     }, icon('clock', { size: 12 }), fmtClock(c.t)));
   }
 
@@ -563,13 +836,13 @@ function tagMenu(anchor) {
   const existing = allTags().map(([t]) => t).filter((t) => !(c.tags || []).includes(t));
   const input = h('input.field', { placeholder: 'new tag…', spellcheck: false });
   const list = h('div.tag-pop-list', ...existing.slice(0, 8).map((t) => h('button.menu-row', {
-    on: { click: () => { addTag(t); import('./ui.js?v=440f02a293').then((m) => m.closePopover()); } },
+    on: { click: () => { addTag(t); import('./ui.js?v=58e76add28').then((m) => m.closePopover()); } },
   }, h('span.menu-ico', { text: '#' }), h('span.menu-label', { text: t }))));
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const value = input.value.trim().replace(/^#/, '').toLowerCase().replace(/\s+/g, '-');
       if (value) addTag(value);
-      import('./ui.js?v=440f02a293').then((m) => m.closePopover());
+      import('./ui.js?v=58e76add28').then((m) => m.closePopover());
     }
   });
   popover(h('div.tag-pop', input, existing.length ? list : null), { anchor, width: 210 });
@@ -590,14 +863,14 @@ function pageMenu(anchor) {
   const c = card(state.cardId);
   contextMenu([
     { label: 'open the map', icon: 'grid', hint: 'ctrl+b', onPick: () => toggleMap() },
-    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=440f02a293')).openReader() },
+    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=58e76add28')).openReader() },
     { sep: true },
     { label: 'add a sub-page', icon: 'cards', onPick: () => addSubPage(null) },
     { label: 'floating text box', icon: 'textbox', hint: 'ctrl+shift+t', onPick: () => addFreeBox() },
     { sep: true },
-    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=440f02a293')).exportMarkdown(c.id) },
-    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=440f02a293')).exportHtml(c.id) },
-    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=440f02a293')).exportSession(state.board.id) },
+    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=58e76add28')).exportMarkdown(c.id) },
+    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=58e76add28')).exportHtml(c.id) },
+    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=58e76add28')).exportSession(state.board.id) },
     ...(c.parent ? [{ sep: true }, { label: 'delete this page', icon: 'trash', danger: true, onPick: () => removePage(c) }] : []),
   ], { anchor, align: 'end' });
 }
@@ -643,6 +916,7 @@ function paintKids(wrap, c) {
   if (!kids.length) return;
   const grid = h('div.kids-grid', ...kids.map((kid) => {
     const el = h('button.kid-card', {
+      data: { id: kid.id },
       on: {
         click: () => openCardPage(kid.id, el),
         contextmenu: (e) => { e.preventDefault(); kidMenu(kid, e.clientX, e.clientY); },
@@ -682,7 +956,7 @@ export function addSidenoteFromSelection() {
   const noteId = uid('sn');
   const sel = getSelection();
   if (sel && !sel.isCollapsed) {
-    import('./editor.js?v=440f02a293').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
+    import('./editor.js?v=58e76add28').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
   } else {
     const mark = document.createElement('span');
     mark.setAttribute('data-side', noteId);
@@ -858,7 +1132,7 @@ function freeBoxEl(box) {
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      import('./whiteboard.js?v=440f02a293').then(({ STICKY_COLOURS }) => {
+      import('./whiteboard.js?v=58e76add28').then(({ STICKY_COLOURS }) => {
         contextMenu([
           { row: STICKY_COLOURS.map((c) => ({ icon: 'callout', color: c, tip: 'recolour', onPick: () => {
             const cardId = state.cardId;

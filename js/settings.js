@@ -1,11 +1,11 @@
 /* the gear — everything you can change lives here, not in a ribbon. */
 
-import { $, h, clear } from './util.js?v=440f02a293';
-import { icon } from './icons.js?v=440f02a293';
-import { api, isStatic, mode } from './api.js?v=440f02a293';
-import { state, setSetting, bus } from './store.js?v=440f02a293';
-import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from './ui.js?v=440f02a293';
-import { animate, settle, fadeOut, EASE } from './motion.js?v=440f02a293';
+import { $, h, clear } from './util.js?v=58e76add28';
+import { icon } from './icons.js?v=58e76add28';
+import { api, isStatic, mode } from './api.js?v=58e76add28';
+import { state, setSetting, bus } from './store.js?v=58e76add28';
+import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from './ui.js?v=58e76add28';
+import { animate, settle, fadeOut, EASE } from './motion.js?v=58e76add28';
 
 const THEMES = [
   ['carbon', 'carbon', ['#0d0d0f', '#191a1d', '#e5484d']],
@@ -234,9 +234,9 @@ function dataTab() {
     state.board ? h('section.gear-section',
       h('h3', { text: 'export this session' }),
       h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=440f02a293')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=440f02a293')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
-        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=440f02a293')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=58e76add28')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=58e76add28')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
+        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=58e76add28')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
     ) : null,
     h('section.gear-section',
       h('h3', { text: 'server' }),
@@ -251,7 +251,7 @@ function webDataTab() {
   const synced = mode === 'cloud';
   const size = h('p.modal-text', { text: synced ? '' : 'measuring…' });
   if (!synced) {
-    import('./vault.js?v=440f02a293').then(async (v) => {
+    import('./vault.js?v=58e76add28').then(async (v) => {
       const s = await v.vaultSize();
       size.textContent = `${s.records} sealed records · about ${(s.bytes / 1048576).toFixed(1)} mb, all of it encrypted with your password.`;
     });
@@ -266,7 +266,7 @@ function webDataTab() {
           : `you are ${currentUserName()} on the hosted copy. your notes live in this browser only — they do not follow you to another device.`,
       }),
       size,
-      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./api.js?v=440f02a293')).signOut() } },
+      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./api.js?v=58e76add28')).signOut() } },
         icon('back', { size: 14 }), 'sign out'),
     ),
     synced ? null : h('section.gear-section',
@@ -279,9 +279,9 @@ function webDataTab() {
     state.board ? h('section.gear-section',
       h('h3', { text: 'export this session' }),
       h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=440f02a293')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=440f02a293')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
-        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=440f02a293')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=58e76add28')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=58e76add28')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
+        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=58e76add28')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
     ) : null,
   );
 }
@@ -291,8 +291,8 @@ function currentUserName() {
 }
 
 async function doBackup() {
-  const v = await import('./vault.js?v=440f02a293');
-  const { download } = await import('./util.js?v=440f02a293');
+  const v = await import('./vault.js?v=58e76add28');
+  const { download } = await import('./util.js?v=58e76add28');
   const vault = await v.exportVault();
   download(`vodpad-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(vault), 'application/json');
   toast('backup saved to downloads — it is encrypted', { kind: 'ok' });
@@ -306,7 +306,7 @@ async function doRestore() {
     input.remove();
     if (!file) return;
     try {
-      const v = await import('./vault.js?v=440f02a293');
+      const v = await import('./vault.js?v=58e76add28');
       const n = await v.importVault(file);
       toast(`restored ${n} records — reloading`, { kind: 'ok' });
       setTimeout(() => location.reload(), 900);

@@ -1,14 +1,14 @@
 /* the entrance. sessions, the drill list, and what you've been getting wrong. */
 
-import { $, h, clear, fmtRel, fmtDate, previewOf, escapeHtml, debounce } from './util.js?v=440f02a293';
-import { icon } from './icons.js?v=440f02a293';
-import { mediaUrl, api, mode } from './api.js?v=440f02a293';
-import { state, bus, createBoard, deleteBoard, refreshBoards, cardTitle, saveSettings, ownerCounts, isForeign } from './store.js?v=440f02a293';
-import { registerSurface, go } from './nav.js?v=440f02a293';
-import { toast, contextMenu, promptDialog, confirmDialog } from './ui.js?v=440f02a293';
-import { stagger, countUp, animate, EASE } from './motion.js?v=440f02a293';
-import { allCards } from './corpus.js?v=440f02a293';
-import { openGear } from './settings.js?v=440f02a293';
+import { $, h, clear, fmtRel, fmtDate, previewOf, escapeHtml, debounce } from './util.js?v=58e76add28';
+import { icon } from './icons.js?v=58e76add28';
+import { mediaUrl, api, mode } from './api.js?v=58e76add28';
+import { state, bus, createBoard, deleteBoard, refreshBoards, cardTitle, saveSettings, ownerCounts, isForeign } from './store.js?v=58e76add28';
+import { registerSurface, go } from './nav.js?v=58e76add28';
+import { toast, contextMenu, promptDialog, confirmDialog } from './ui.js?v=58e76add28';
+import { stagger, countUp, animate, EASE } from './motion.js?v=58e76add28';
+import { allCards } from './corpus.js?v=58e76add28';
+import { openGear } from './settings.js?v=58e76add28';
 
 let view = { kind: 'all', tag: null, owner: null };
 let query = '';
@@ -103,7 +103,7 @@ function main() {
           on: { input: debounce((e) => { query = e.target.value; paintGrid(); }, 120) },
         })),
       h('button.btn', { tip: 'bring in a .vodpad session file from another device or another person',
-        on: { click: async () => (await import('./transfer.js?v=440f02a293')).pickSessionFile() } }, icon('upload', { size: 15 }), 'import'),
+        on: { click: async () => (await import('./transfer.js?v=58e76add28')).pickSessionFile() } }, icon('upload', { size: 15 }), 'import'),
       h('button.btn.btn-primary', { on: { click: newSession } }, icon('plus', { size: 15 }), 'new session')),
   ));
 
@@ -249,8 +249,8 @@ function cardMenu(meta, anchor, x, y) {
     } : null,
     !synced ? { label: 'show files', icon: 'folder', onPick: () => api.reveal('board', meta.id).catch(() => {}) } : null,
     { sep: true },
-    { label: 'export session file', icon: 'download', hint: '.vodpad', onPick: async () => (await import('./transfer.js?v=440f02a293')).exportSession(meta.id) },
-    { label: 'how do i send this to someone?', icon: 'link', onPick: async () => (await import('./transfer.js?v=440f02a293')).transferHelp() },
+    { label: 'export session file', icon: 'download', hint: '.vodpad', onPick: async () => (await import('./transfer.js?v=58e76add28')).exportSession(meta.id) },
+    { label: 'how do i send this to someone?', icon: 'link', onPick: async () => (await import('./transfer.js?v=58e76add28')).transferHelp() },
     mine ? { sep: true } : null,
     mine ? { label: 'delete session', icon: 'trash', danger: true, onPick: () => remove(meta) } : null,
   ].filter(Boolean), anchor ? { anchor, align: 'end' } : { x, y });

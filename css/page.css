@@ -27,8 +27,8 @@
 }
 .side-tabs { display: flex; gap: 2px; flex: 1; min-width: 0; }
 .side-tab {
-  display: inline-flex; align-items: center; gap: 5px;
-  height: 26px; padding: 0 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 26px; flex: none; padding: 0;
   border: 0; border-radius: var(--radius-sm); background: none; color: var(--muted);
   font-size: 11.5px; cursor: pointer; white-space: nowrap;
   transition: background var(--d1), color var(--d1);
@@ -95,6 +95,51 @@
   font-size: 11px; color: var(--faint);
 }
 .side-stat b { color: var(--text); font-weight: 620; margin-right: 3px; }
+
+/* the tabs are icons, so the body says which one you are looking at */
+.side-cap { padding: 2px 8px 10px; display: grid; gap: 2px; }
+.side-cap b { font-size: 12px; font-weight: 620; color: var(--text); }
+.side-cap span { font-size: 10.5px; line-height: 1.45; color: var(--faint); }
+
+.side-foot { padding: 12px 6px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.side-group {
+  display: flex; align-items: center; gap: 7px;
+  padding: 12px 8px 5px;
+  font-size: 11px; color: var(--faint); text-transform: lowercase;
+}
+.side-group .side-text { flex: 1; }
+.side-count {
+  min-width: 16px; padding: 0 4px; border-radius: 99px;
+  background: var(--bg-3); color: var(--muted);
+  font-size: 10px; font-family: var(--font-mono); text-align: center;
+}
+
+/* ---------------- timeline ---------------- */
+
+.tl-row { align-items: baseline; }
+.tl-t {
+  flex: none; font-family: var(--font-mono); font-size: 11px;
+  color: var(--accent); min-width: 38px;
+}
+.tl-row:hover .tl-t { color: var(--accent); }
+
+/* ---------------- drills ---------------- */
+
+.dr-row { align-items: stretch; gap: 8px; padding: 7px 8px; }
+.dr-bar { width: 2px; flex: none; border-radius: 99px; background: var(--bg-4); }
+.dr-meat { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.dr-title { font-size: 12.5px; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dr-preview { font-size: 11px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------------- tags ---------------- */
+
+.side-tags { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 4px; }
+.side-tag { gap: 5px; }
+.side-tag .side-count { background: none; color: inherit; opacity: .7; min-width: 0; padding: 0; }
+
+/* clicking a tag fades the rest of the page back — it stays readable and editable */
+.tag-out { opacity: .2; transition: opacity var(--d2); }
+.tag-out:focus-within { opacity: 1; }
 
 /* ---------------- the infinite plane ---------------- */
 

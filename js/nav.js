@@ -1,10 +1,10 @@
 /* router + top bar chrome. three surfaces, one history stack. */
 
-import { $, $$, h, clear } from './util.js?v=440f02a293';
-import { icon } from './icons.js?v=440f02a293';
-import { state, bus, openBoard, saveNow, pathTo, cardTitle, card } from './store.js?v=440f02a293';
-import { ghostTo } from './motion.js?v=440f02a293';
-import { toast } from './ui.js?v=440f02a293';
+import { $, $$, h, clear } from './util.js?v=58e76add28';
+import { icon } from './icons.js?v=58e76add28';
+import { state, bus, openBoard, saveNow, pathTo, cardTitle, card } from './store.js?v=58e76add28';
+import { ghostTo } from './motion.js?v=58e76add28';
+import { toast } from './ui.js?v=58e76add28';
 
 const SURFACE = { dash: '#surface-dash', board: '#surface-board', page: '#surface-page' };
 const mounts = {};
