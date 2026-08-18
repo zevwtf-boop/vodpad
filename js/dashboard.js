@@ -1,20 +1,28 @@
 /* the entrance. sessions, the drill list, and what you've been getting wrong. */
 
-import { $, h, clear, fmtRel, fmtDate, previewOf, escapeHtml, debounce } from './util.js?v=58e76add28';
-import { icon } from './icons.js?v=58e76add28';
-import { mediaUrl, api, mode } from './api.js?v=58e76add28';
-import { state, bus, createBoard, deleteBoard, refreshBoards, cardTitle, saveSettings, ownerCounts, isForeign } from './store.js?v=58e76add28';
-import { registerSurface, go } from './nav.js?v=58e76add28';
-import { toast, contextMenu, promptDialog, confirmDialog } from './ui.js?v=58e76add28';
-import { stagger, countUp, animate, EASE } from './motion.js?v=58e76add28';
-import { allCards } from './corpus.js?v=58e76add28';
-import { openGear } from './settings.js?v=58e76add28';
+import { $, h, clear, fmtRel, fmtDate, previewOf, escapeHtml, debounce } from './util.js?v=764fd7e397';
+import { icon } from './icons.js?v=764fd7e397';
+import { mediaUrl, api, mode } from './api.js?v=764fd7e397';
+import { state, bus, createBoard, deleteBoard, refreshBoards, cardTitle, saveSettings, ownerCounts, isForeign } from './store.js?v=764fd7e397';
+import { registerSurface, go } from './nav.js?v=764fd7e397';
+import { toast, contextMenu, promptDialog, confirmDialog } from './ui.js?v=764fd7e397';
+import { stagger, countUp, animate, EASE } from './motion.js?v=764fd7e397';
+import { allCards } from './corpus.js?v=764fd7e397';
+import { openGear } from './settings.js?v=764fd7e397';
 
 let view = { kind: 'all', tag: null, owner: null };
 let query = '';
 let host = null;
 
 const show = (kind, extra = {}) => { view = { kind, tag: null, owner: null, ...extra }; render(); };
+
+/** switch the dashboard to one of its views from elsewhere (the command
+ *  palette). only paints if the dashboard is the mounted surface — otherwise it
+ *  just sets where you land next time. */
+export function showView(kind, extra = {}) {
+  view = { kind, tag: null, owner: null, ...extra };
+  if (host) render();
+}
 
 registerSurface('dash', {
   mount(el) { host = el; render(); },
@@ -46,7 +54,10 @@ function rail() {
     { kind: 'recent', label: 'recent', ico: 'clock' },
     { kind: 'starred', label: 'starred', ico: 'star' },
     { kind: 'drill', label: 'drill list', ico: 'drill' },
+    { kind: 'patterns', label: 'patterns', ico: 'target' },
   ];
+  // only the synced build has accounts at all, and only an admin runs them
+  if (state.admin && mode === 'cloud') items.push({ kind: 'accounts', label: 'accounts', ico: 'users' });
   const tags = tagCounts().slice(0, 9);
   const owners = state.admin ? ownerCounts() : [];
 
@@ -103,7 +114,7 @@ function main() {
           on: { input: debounce((e) => { query = e.target.value; paintGrid(); }, 120) },
         })),
       h('button.btn', { tip: 'bring in a .vodpad session file from another device or another person',
-        on: { click: async () => (await import('./transfer.js?v=58e76add28')).pickSessionFile() } }, icon('upload', { size: 15 }), 'import'),
+        on: { click: async () => (await import('./transfer.js?v=764fd7e397')).pickSessionFile() } }, icon('upload', { size: 15 }), 'import'),
       h('button.btn.btn-primary', { on: { click: newSession } }, icon('plus', { size: 15 }), 'new session')),
   ));
 
@@ -148,10 +159,23 @@ async function paintGrid() {
   clear(body);
 
   if (view.kind === 'drill') return paintDrill(body);
+  if (view.kind === 'patterns') {
+    const { paintPatterns } = await import('./patterns.js?v=764fd7e397');
+    return paintPatterns(body);
+  }
+  if (view.kind === 'accounts') {
+    const { paintAccounts } = await import('./accounts.js?v=764fd7e397');
+    return paintAccounts(body, (owner) => show('owner', { owner }));
+  }
 
   let list = state.boards.slice();
   if (view.kind === 'starred') list = list.filter((b) => b.starred);
   if (view.kind === 'recent') list = list.slice(0, 8);
+  // starring already meant "this one matters"; make it mean "and keep it in
+  // front of me" rather than letting it sink as other sessions are touched
+  if (view.kind === 'all' || view.kind === 'tag' || view.kind === 'owner') {
+    list.sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
+  }
   if (view.kind === 'tag') list = list.filter((b) => b.tags && b.tags[view.tag]);
   if (view.kind === 'owner') list = list.filter((b) => b.owner === view.owner);
   if (query.trim()) {
@@ -178,10 +202,21 @@ const sectionTitle = () => view.kind === 'tag' ? `#${view.tag}`
   : view.kind === 'starred' ? 'starred'
   : view.kind === 'recent' ? 'recently opened' : 'all sessions';
 
+/* on the hosted builds a picture only has a url once something has fetched it,
+   so a freshly loaded dashboard used to draw every tile empty. ask for the one
+   picture the tile needs and drop it in when it lands. */
+function thumbFor(meta) {
+  if (!meta.thumb) return h('div.sc-thumb.sc-thumb-empty', icon('page', { size: 22 }));
+  const known = mediaUrl(meta.id, meta.thumb);
+  // never set src="" — the browser resolves that to the page itself and fetches it
+  const img = h('img', { loading: 'lazy', alt: '' });
+  if (known) img.src = known;
+  else if (api.warmThumb) api.warmThumb(meta.id, meta.thumb).then((url) => { if (url) img.src = url; }).catch(() => {});
+  return h('div.sc-thumb', img);
+}
+
 function sessionCard(meta) {
-  const thumb = meta.thumb
-    ? h('div.sc-thumb', h('img', { src: mediaUrl(meta.id, meta.thumb), loading: 'lazy', alt: '' }))
-    : h('div.sc-thumb.sc-thumb-empty', icon('page', { size: 22 }));
+  const thumb = thumbFor(meta);
 
   const tags = Object.entries(meta.tags || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
@@ -249,11 +284,30 @@ function cardMenu(meta, anchor, x, y) {
     } : null,
     !synced ? { label: 'show files', icon: 'folder', onPick: () => api.reveal('board', meta.id).catch(() => {}) } : null,
     { sep: true },
-    { label: 'export session file', icon: 'download', hint: '.vodpad', onPick: async () => (await import('./transfer.js?v=58e76add28')).exportSession(meta.id) },
-    { label: 'how do i send this to someone?', icon: 'link', onPick: async () => (await import('./transfer.js?v=58e76add28')).transferHelp() },
+    { label: 'export session file', icon: 'download', hint: '.vodpad', onPick: async () => (await import('./transfer.js?v=764fd7e397')).exportSession(meta.id) },
+    {
+      label: 'clip list for an editor', icon: 'clock',
+      sub: [
+        { label: 'plain lines — paste into a message', icon: 'copy',
+          onPick: () => clips(meta, false) },
+        { label: 'spreadsheet — one row per moment', icon: 'table', hint: '.csv',
+          onPick: () => clips(meta, true) },
+      ],
+      subWidth: 280,
+    },
+    { label: 'how do i send this to someone?', icon: 'link', onPick: async () => (await import('./transfer.js?v=764fd7e397')).transferHelp() },
     mine ? { sep: true } : null,
     mine ? { label: 'delete session', icon: 'trash', danger: true, onPick: () => remove(meta) } : null,
   ].filter(Boolean), anchor ? { anchor, align: 'end' } : { x, y });
+}
+
+/** every timestamp in the session, without having to open it first */
+async function clips(meta, csv) {
+  try {
+    const doc = state.board?.id === meta.id ? state.board : await api.board(meta.id);
+    const { exportClipList } = await import('./exporter.js?v=764fd7e397');
+    await exportClipList(doc, { csv });
+  } catch (err) { toast(err.message, { kind: 'error' }); }
 }
 
 async function rename(meta) {
@@ -292,10 +346,22 @@ async function remove(meta) {
 }
 
 async function newSession() {
-  const suggested = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' session';
-  const title = await promptDialog({ title: 'new session', value: suggested, placeholder: 'e.g. ranked trios — 09 aug', okLabel: 'create' });
-  if (title === null) return;
-  const board = await createBoard(title || suggested);
+  const { askForNewSession, applyTemplate } = await import('./templates.js?v=764fd7e397');
+  const picked = await askForNewSession();
+  if (!picked) return;
+
+  const board = await createBoard(picked.title);
+  // the template is stamped on after creation, so a backend that fails here
+  // still leaves you with a real (empty) session rather than nothing
+  if (picked.template?.blocks?.length) {
+    try {
+      applyTemplate(board, picked.template);
+      await api.saveBoard(board.id, board);
+      await refreshBoards();
+    } catch (err) {
+      toast(`session made, but the template did not stick: ${err.message}`, { kind: 'warn', ms: 5000 });
+    }
+  }
   toast('session created', { kind: 'ok' });
   go({ name: 'page', boardId: board.id });
 }

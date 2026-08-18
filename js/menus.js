@@ -5,10 +5,10 @@
    hold shift while right-clicking if you ever want the browser's menu back.
 */
 
-import { h, fmtClock } from './util.js?v=58e76add28';
-import { state, card, commit, cardTitle, deleteCard, childrenOf } from './store.js?v=58e76add28';
-import { contextMenu, toast, promptDialog, confirmDialog } from './ui.js?v=58e76add28';
-import { mediaUrl } from './api.js?v=58e76add28';
+import { h, fmtClock } from './util.js?v=764fd7e397';
+import { state, card, commit, cardTitle, deleteCard, childrenOf, SEV_LABEL } from './store.js?v=764fd7e397';
+import { contextMenu, toast, promptDialog, confirmDialog } from './ui.js?v=764fd7e397';
+import { mediaUrl } from './api.js?v=764fd7e397';
 
 export function installContextMenus() {
   document.addEventListener('contextmenu', route, false);
@@ -98,7 +98,7 @@ const TURN = [
 ];
 
 async function blockMenu(blk, at) {
-  const ed = await import('./editor.js?v=58e76add28');
+  const ed = await import('./editor.js?v=764fd7e397');
   const id = blk.dataset.id;
   const block = ed.getBlock(id);
   if (!block) return;
@@ -149,9 +149,9 @@ async function blockMenu(blk, at) {
           ed.setFloat(id, { x: Math.round(((box?.left ?? r.left + 40) - r.left)) + 24, y: Math.round(((box?.top ?? r.top + 40) - r.top)), w: 320 });
         } },
     { sep: true },
-    { label: 'note in the margin', icon: 'sidenote', hint: 'ctrl+m', onPick: async () => (await import('./page.js?v=58e76add28')).addSidenoteFromSelection() },
-    { label: 'link this line to a picture', icon: 'link', hint: 'ctrl+l', onPick: async () => (await import('./anchors.js?v=58e76add28')).startAnchorPick() },
-    { label: 'make it a sub-page', icon: 'cards', onPick: async () => (await import('./page.js?v=58e76add28')).addSubPage(id) },
+    { label: 'note in the margin', icon: 'sidenote', hint: 'ctrl+m', onPick: async () => (await import('./page.js?v=764fd7e397')).addSidenoteFromSelection() },
+    { label: 'link this line to a picture', icon: 'link', hint: 'ctrl+l', onPick: async () => (await import('./anchors.js?v=764fd7e397')).startAnchorPick() },
+    { label: 'make it a sub-page', icon: 'cards', onPick: async () => (await import('./page.js?v=764fd7e397')).addSubPage(id) },
     { sep: true },
     ...clipboardRows(),
     { sep: true },
@@ -163,20 +163,20 @@ async function blockMenu(blk, at) {
 
 function insertItems(afterId) {
   return [
-    { label: 'picture from a file', icon: 'image', onPick: async () => (await import('./images.js?v=58e76add28')).pickImageFile(afterId) },
-    { label: 'heading', icon: 'h2', onPick: async () => { const ed = await import('./editor.js?v=58e76add28'); ed.insertBlock(afterId, { type: 'h2' }, true); } },
-    { label: 'bullet list', icon: 'listUl', onPick: async () => { const ed = await import('./editor.js?v=58e76add28'); ed.insertBlock(afterId, { type: 'ul' }, true); } },
-    { label: 'checklist', icon: 'listCheck', onPick: async () => { const ed = await import('./editor.js?v=58e76add28'); ed.insertBlock(afterId, { type: 'todo' }, true); } },
-    { label: 'quote', icon: 'quote', onPick: async () => { const ed = await import('./editor.js?v=58e76add28'); ed.insertBlock(afterId, { type: 'quote' }, true); } },
-    { label: 'callout', icon: 'callout', onPick: async () => { const ed = await import('./editor.js?v=58e76add28'); ed.insertBlock(afterId, { type: 'callout' }, true); } },
-    { label: 'code', icon: 'codeTag', onPick: async () => { const ed = await import('./editor.js?v=58e76add28'); ed.insertBlock(afterId, { type: 'code' }, true); } },
-    { label: 'table', icon: 'table', onPick: async () => { const ed = await import('./editor.js?v=58e76add28'); const made = ed.insertBlock(afterId, { type: 'p' }, false); ed.setType(made.id, 'table', { rows: [['', '', ''], ['', '', ''], ['', '', '']], header: true }); } },
-    { label: 'divider', icon: 'divider', onPick: async () => { const ed = await import('./editor.js?v=58e76add28'); const made = ed.insertBlock(afterId, { type: 'p' }, false); ed.setType(made.id, 'divider'); } },
+    { label: 'picture from a file', icon: 'image', onPick: async () => (await import('./images.js?v=764fd7e397')).pickImageFile(afterId) },
+    { label: 'heading', icon: 'h2', onPick: async () => { const ed = await import('./editor.js?v=764fd7e397'); ed.insertBlock(afterId, { type: 'h2' }, true); } },
+    { label: 'bullet list', icon: 'listUl', onPick: async () => { const ed = await import('./editor.js?v=764fd7e397'); ed.insertBlock(afterId, { type: 'ul' }, true); } },
+    { label: 'checklist', icon: 'listCheck', onPick: async () => { const ed = await import('./editor.js?v=764fd7e397'); ed.insertBlock(afterId, { type: 'todo' }, true); } },
+    { label: 'quote', icon: 'quote', onPick: async () => { const ed = await import('./editor.js?v=764fd7e397'); ed.insertBlock(afterId, { type: 'quote' }, true); } },
+    { label: 'callout', icon: 'callout', onPick: async () => { const ed = await import('./editor.js?v=764fd7e397'); ed.insertBlock(afterId, { type: 'callout' }, true); } },
+    { label: 'code', icon: 'codeTag', onPick: async () => { const ed = await import('./editor.js?v=764fd7e397'); ed.insertBlock(afterId, { type: 'code' }, true); } },
+    { label: 'table', icon: 'table', onPick: async () => { const ed = await import('./editor.js?v=764fd7e397'); const made = ed.insertBlock(afterId, { type: 'p' }, false); ed.setType(made.id, 'table', { rows: [['', '', ''], ['', '', ''], ['', '', '']], header: true }); } },
+    { label: 'divider', icon: 'divider', onPick: async () => { const ed = await import('./editor.js?v=764fd7e397'); const made = ed.insertBlock(afterId, { type: 'p' }, false); ed.setType(made.id, 'divider'); } },
     { sep: true },
-    { label: 'floating text box', icon: 'textbox', hint: 'ctrl+shift+t', onPick: async () => (await import('./page.js?v=58e76add28')).addFreeBox() },
-    { label: 'margin note', icon: 'sidenote', hint: 'ctrl+m', onPick: async () => (await import('./page.js?v=58e76add28')).addSidenoteFromSelection() },
-    { label: 'sub-page', icon: 'cards', onPick: async () => (await import('./page.js?v=58e76add28')).addSubPage(afterId) },
-    { label: 'timestamp', icon: 'clock', onPick: async () => (await import('./video.js?v=58e76add28')).insertTimestamp(afterId) },
+    { label: 'floating text box', icon: 'textbox', hint: 'ctrl+shift+t', onPick: async () => (await import('./page.js?v=764fd7e397')).addFreeBox() },
+    { label: 'margin note', icon: 'sidenote', hint: 'ctrl+m', onPick: async () => (await import('./page.js?v=764fd7e397')).addSidenoteFromSelection() },
+    { label: 'sub-page', icon: 'cards', onPick: async () => (await import('./page.js?v=764fd7e397')).addSubPage(afterId) },
+    { label: 'timestamp', icon: 'clock', onPick: async () => (await import('./video.js?v=764fd7e397')).insertTimestamp(afterId) },
   ];
 }
 
@@ -184,16 +184,16 @@ function insertItems(afterId) {
 
 async function imageMenu(fig, at) {
   const id = fig.dataset.id;
-  const img = await import('./images.js?v=58e76add28');
+  const img = await import('./images.js?v=764fd7e397');
   const block = card(state.cardId)?.blocks.find((b) => b.id === id);
   if (!block) return;
 
   contextMenu([
     {
       row: [
-        { icon: 'pen', tip: 'draw on it', onPick: async () => (await import('./annotate.js?v=58e76add28')).openAnnotator(id) },
+        { icon: 'pen', tip: 'draw on it', onPick: async () => (await import('./annotate.js?v=764fd7e397')).openAnnotator(id) },
         { icon: 'pin', tip: 'add a numbered pin', onPick: () => img.armPin(id) },
-        { icon: 'link', tip: 'link to a line of text', onPick: async () => (await import('./anchors.js?v=58e76add28')).linkImageToLine(id) },
+        { icon: 'link', tip: 'link to a line of text', onPick: async () => (await import('./anchors.js?v=764fd7e397')).linkImageToLine(id) },
         { icon: 'copy', tip: 'copy the picture', onPick: () => copyPicture(block) },
         { icon: 'crop', tip: 'full width', onPick: () => img.setLayout(id, 'full') },
       ],
@@ -215,16 +215,18 @@ async function imageMenu(fig, at) {
       })),
     },
     { sep: true },
-    { label: 'draw on it', icon: 'pen', hint: 'double-click', onPick: async () => (await import('./annotate.js?v=58e76add28')).openAnnotator(id) },
+    { label: 'draw on it', icon: 'pen', hint: 'double-click', onPick: async () => (await import('./annotate.js?v=764fd7e397')).openAnnotator(id) },
     { label: 'add a pin', icon: 'pin', onPick: () => img.armPin(id) },
-    { label: 'link to a line of text', icon: 'link', onPick: async () => (await import('./anchors.js?v=58e76add28')).linkImageToLine(id) },
+    { label: 'link to a line of text', icon: 'link', onPick: async () => (await import('./anchors.js?v=764fd7e397')).linkImageToLine(id) },
     { label: (block.strokes || []).length ? `clear ${block.strokes.length} drawings` : 'clear drawings', icon: 'eraser', disabled: !(block.strokes || []).length, onPick: () => img.clearStrokes(id) },
     { sep: true },
+    { label: 'compare with another picture…', icon: 'layers',
+      onPick: async () => (await import('./compare.js?v=764fd7e397')).compareWith(id) },
     { label: 'copy the picture', icon: 'copy', onPick: () => copyPicture(block) },
     { label: 'open the file', icon: 'folder', onPick: () => window.open(mediaUrl(state.board.id, block.src), '_blank') },
     { label: 'replace it', icon: 'upload', onPick: () => img.replacePicture(id) },
     { sep: true },
-    { label: 'delete picture', icon: 'trash', danger: true, onPick: async () => (await import('./editor.js?v=58e76add28')).deleteBlock(id) },
+    { label: 'delete picture', icon: 'trash', danger: true, onPick: async () => (await import('./editor.js?v=764fd7e397')).deleteBlock(id) },
   ], { ...at, width: 244 });
 }
 
@@ -240,12 +242,12 @@ async function copyPicture(block) {
 
 async function pinMenu(pin, at) {
   const fig = pin.closest('.img-block');
-  const img = await import('./images.js?v=58e76add28');
+  const img = await import('./images.js?v=764fd7e397');
   const blockId = fig.dataset.id;
   const pinId = pin.dataset.id;
   contextMenu([
     { label: 'write in this pin', icon: 'pen', onPick: () => pin.click() },
-    { label: 'link it to a line of text', icon: 'link', onPick: async () => (await import('./anchors.js?v=58e76add28')).linkPinToLine(blockId, pinId) },
+    { label: 'link it to a line of text', icon: 'link', onPick: async () => (await import('./anchors.js?v=764fd7e397')).linkPinToLine(blockId, pinId) },
     { sep: true },
     { label: 'delete pin', icon: 'trash', danger: true, onPick: () => img.removePin(blockId, pinId) },
   ], at);
@@ -254,7 +256,7 @@ async function pinMenu(pin, at) {
 /* ---------------------------------------------------------------- side bits */
 
 async function sidenoteMenu(side, at) {
-  const pg = await import('./page.js?v=58e76add28');
+  const pg = await import('./page.js?v=764fd7e397');
   contextMenu([
     { label: 'edit', icon: 'pen', onPick: () => side.querySelector('.sidenote-body')?.focus() },
     ...clipboardRows(),
@@ -264,7 +266,7 @@ async function sidenoteMenu(side, at) {
 }
 
 async function freeMenu(free, at) {
-  const pg = await import('./page.js?v=58e76add28');
+  const pg = await import('./page.js?v=764fd7e397');
   contextMenu([
     { label: 'edit', icon: 'pen', onPick: () => free.querySelector('.freebox-body')?.focus() },
     { label: 'duplicate', icon: 'copy', onPick: () => pg.duplicateFreeBox(free.dataset.id) },
@@ -275,7 +277,7 @@ async function freeMenu(free, at) {
 }
 
 async function anchorMenu(mark, at) {
-  const anchors = await import('./anchors.js?v=58e76add28');
+  const anchors = await import('./anchors.js?v=764fd7e397');
   contextMenu([
     { label: 'go to the picture', icon: 'image', onPick: () => mark.click() },
     { label: 'remove this link', icon: 'unlink', danger: true, onPick: () => anchors.removeAnchor(mark.dataset.anchor) },
@@ -299,7 +301,7 @@ async function subPageMenu(el, at) {
   const id = targetCardId(el);
   const kid = card(id);
   if (!kid) return;
-  const nav = await import('./nav.js?v=58e76add28');
+  const nav = await import('./nav.js?v=764fd7e397');
   contextMenu([
     { label: 'open', icon: 'forward', onPick: () => nav.openCardPage(id) },
     { label: 'look inside on the map', icon: 'grid', onPick: () => nav.go({ name: 'board', boardId: state.board.id, cardId: id }) },
@@ -308,27 +310,26 @@ async function subPageMenu(el, at) {
       const name = await promptDialog({ title: 'rename sub-page', value: kid.title || '' });
       if (name === null) return;
       commit('rename', (b) => { b.cards[id].title = name; });
-      (await import('./page.js?v=58e76add28')).refreshPage();
+      (await import('./page.js?v=764fd7e397')).refreshPage();
     } },
     flagSub(id, kid),
     { sep: true },
     { label: 'delete sub-page', icon: 'trash', danger: true, onPick: async () => {
       if (!(await confirmDialog({ title: `delete "${cardTitle(kid)}"?`, body: 'everything inside it goes too.', okLabel: 'delete', danger: true }))) return;
       deleteCard(id);
-      (await import('./page.js?v=58e76add28')).refreshPage();
+      (await import('./page.js?v=764fd7e397')).refreshPage();
     } },
   ], at);
 }
 
 function flagSub(id, target) {
-  const names = ['no flag', 'working on it', 'costs me games', 'fixed — keep doing it'];
   return {
     label: 'flag', icon: 'severity',
-    sub: names.map((label, lvl) => ({
+    sub: SEV_LABEL.map((label, lvl) => ({
       label, icon: lvl ? 'severity' : 'minus', checked: (target.severity || 0) === lvl,
       onPick: async () => {
         commit('severity', (b) => { b.cards[id].severity = lvl; });
-        const pg = await import('./page.js?v=58e76add28');
+        const pg = await import('./page.js?v=764fd7e397');
         pg.refreshPage();
       },
     })),
@@ -338,8 +339,8 @@ function flagSub(id, target) {
 /* ---------------------------------------------------------------- backgrounds */
 
 async function pageBackgroundMenu(at) {
-  const ed = await import('./editor.js?v=58e76add28');
-  const pg = await import('./page.js?v=58e76add28');
+  const ed = await import('./editor.js?v=764fd7e397');
+  const pg = await import('./page.js?v=764fd7e397');
   const blocks = card(state.cardId)?.blocks || [];
   const lastId = blocks.at(-1)?.id;
   contextMenu([
@@ -347,12 +348,12 @@ async function pageBackgroundMenu(at) {
     { label: 'insert', icon: 'layers', sub: insertItems(lastId) },
     { sep: true },
     { label: 'floating text box here', icon: 'textbox', hint: 'ctrl+shift+t', onPick: () => pg.addFreeBox(at) },
-    { label: 'picture from a file', icon: 'image', onPick: async () => (await import('./images.js?v=58e76add28')).pickImageFile(lastId) },
+    { label: 'picture from a file', icon: 'image', onPick: async () => (await import('./images.js?v=764fd7e397')).pickImageFile(lastId) },
     { label: 'sub-page', icon: 'cards', onPick: () => pg.addSubPage(null) },
     { sep: true },
-    { label: 'find in this page', icon: 'find', hint: 'ctrl+h', onPick: async () => (await import('./find.js?v=58e76add28')).openFind() },
+    { label: 'find in this page', icon: 'find', hint: 'ctrl+h', onPick: async () => (await import('./find.js?v=764fd7e397')).openFind() },
     { label: 'select everything', icon: 'grid', onPick: () => ed.selectAllBlocks() },
-    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=58e76add28')).openReader() },
+    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=764fd7e397')).openReader() },
   ], { ...at, width: 226 });
 }
 
@@ -360,8 +361,8 @@ async function mapNodeMenu(node, at) {
   const id = node.dataset.id;
   const target = card(id);
   if (!target) return;
-  const nav = await import('./nav.js?v=58e76add28');
-  const canvas = await import('./canvas.js?v=58e76add28');
+  const nav = await import('./nav.js?v=764fd7e397');
+  const canvas = await import('./canvas.js?v=764fd7e397');
   contextMenu([
     { label: 'open it', icon: 'forward', hint: 'double-click', onPick: () => nav.openCardPage(id, node) },
     { label: 'look inside', icon: 'grid', onPick: () => nav.go({ name: 'board', boardId: state.board.id, cardId: id }) },
@@ -380,7 +381,7 @@ async function mapNodeMenu(node, at) {
 }
 
 async function mapBackgroundMenu(e, at) {
-  const canvas = await import('./canvas.js?v=58e76add28');
+  const canvas = await import('./canvas.js?v=764fd7e397');
   contextMenu([
     { label: 'new card here', icon: 'plus', hint: 'double-click', onPick: () => canvas.addNodeAt(e.clientX, e.clientY, true) },
     { sep: true },
@@ -388,18 +389,18 @@ async function mapBackgroundMenu(e, at) {
     { label: 'zoom in', icon: 'zoomIn', onPick: () => canvas.zoomBy(1.2) },
     { label: 'zoom out', icon: 'zoomOut', onPick: () => canvas.zoomBy(0.83) },
     { sep: true },
-    { label: 'back to the page', icon: 'page', hint: 'ctrl+shift+b', onPick: async () => (await import('./nav.js?v=58e76add28')).toggleMap() },
+    { label: 'back to the page', icon: 'page', hint: 'ctrl+shift+b', onPick: async () => (await import('./nav.js?v=764fd7e397')).toggleMap() },
   ], at);
 }
 
 async function dashMenu(at) {
   contextMenu([
     { label: 'new session', icon: 'plus', onPick: () => document.querySelector('.dash-actions .btn-primary')?.click() },
-    { label: 'import a session file', icon: 'upload', onPick: async () => (await import('./transfer.js?v=58e76add28')).pickSessionFile() },
-    { label: 'search everything', icon: 'search', hint: 'ctrl+k', onPick: async () => (await import('./search.js?v=58e76add28')).openPalette() },
+    { label: 'import a session file', icon: 'upload', onPick: async () => (await import('./transfer.js?v=764fd7e397')).pickSessionFile() },
+    { label: 'search everything', icon: 'search', hint: 'ctrl+k', onPick: async () => (await import('./search.js?v=764fd7e397')).openPalette() },
     { sep: true },
-    { label: 'settings', icon: 'gear', onPick: async () => (await import('./settings.js?v=58e76add28')).openGear() },
-    { label: 'open the notes folder', icon: 'folder', onPick: async () => (await import('./api.js?v=58e76add28')).api.reveal('data') },
+    { label: 'settings', icon: 'gear', onPick: async () => (await import('./settings.js?v=764fd7e397')).openGear() },
+    { label: 'open the notes folder', icon: 'folder', onPick: async () => (await import('./api.js?v=764fd7e397')).api.reveal('data') },
   ], at);
 }
 

@@ -631,8 +631,10 @@ body.picking-line .blk:hover { background: var(--glow); border-radius: var(--rad
   font-size: calc(var(--text-size) * .8); line-height: 1.55; color: var(--muted);
 }
 .sidenote-body:empty::before { content: attr(data-ph); color: var(--faint); }
-.sidenote-x { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; opacity: .4; }
-.sidenote:hover .sidenote-x { opacity: 1; }
+/* always there, just quiet. same reasoning as .node-tools and the session
+   card's ⋯ — nothing important appears only on hover. */
+.sidenote-x { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; opacity: .6; }
+.sidenote:hover .sidenote-x, .sidenote-x:focus-visible { opacity: 1; }
 .side-lit { background: var(--glow); border-radius: 3px; }
 
 /* ---------------- free text boxes ---------------- */
@@ -906,8 +908,50 @@ body.drop-armed #surface-page::after {
   content: "drop the picture anywhere";
   position: absolute; inset: 14px;
   display: grid; place-items: center;
-  border: 2px dashed var(--accent); border-radius: 99px;
+  border: 2px dashed var(--accent); border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--accent) 7%, transparent);
   color: var(--accent); font-size: 14px; font-weight: 600;
   pointer-events: none; z-index: 40;
 }
+
+/* ---------------- frame strip — picking the right moment ---------------- */
+
+.frame-steps { display: flex; gap: 2px; padding: 2px; margin-bottom: 12px; width: fit-content;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-0); }
+
+.frame-strip {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 6px;
+  max-height: min(52vh, 430px); overflow-y: auto;
+}
+.frame-cell {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 4px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm);
+  background: var(--bg-2); color: var(--muted);
+  font: inherit; cursor: pointer;
+  transition: border-color var(--d1), background var(--d1);
+}
+.frame-cell:hover { border-color: var(--accent); background: var(--bg-3); color: var(--text); }
+/* the frame you were actually sitting on, so the offsets read from somewhere */
+.frame-cell.here { border-color: var(--accent); }
+.frame-shot {
+  aspect-ratio: 16 / 9; border-radius: 3px; overflow: hidden;
+  background: var(--bg-0); display: grid; place-items: center;
+}
+.frame-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.frame-t { font-size: 10.5px; font-family: var(--font-mono); text-align: center; }
+
+/* ---------------- stopwatch, for a vod playing somewhere else ---------------- */
+
+.clock-stage {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 22px 16px; background: var(--bg-0);
+}
+.clock-face {
+  font-family: var(--font-mono); font-size: 40px; font-weight: 500;
+  letter-spacing: .04em; font-variant-numeric: tabular-nums; color: var(--text);
+}
+.clock-row { display: flex; align-items: center; gap: 8px; }
+.clock-label { font-size: 11.5px; color: var(--faint); }
+.clock-offset { width: 78px; height: 28px; text-align: center; font-family: var(--font-mono); font-size: 12px; }
+.video-hint { margin: 0; max-width: 300px; font-size: 11px; line-height: 1.5; color: var(--faint); text-align: center; }

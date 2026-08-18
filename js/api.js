@@ -15,6 +15,18 @@ async function req(method, path, body, headers = {}) {
   return payload;
 }
 
+/** every picture a document still points at, as bare filenames.
+ *  all three backends need this to sweep up deleted screenshots. */
+export function mediaNamesOf(doc) {
+  const names = new Set();
+  for (const card of Object.values(doc?.cards || {})) {
+    for (const block of card.blocks || []) {
+      if (block.type === 'image' && block.src) names.add(String(block.src).replace(/^media\//, ''));
+    }
+  }
+  return [...names];
+}
+
 const serverApi = {
   ping:         ()             => req('GET', '/api/ping'),
   boards:       ()             => req('GET', '/api/boards'),
@@ -22,9 +34,15 @@ const serverApi = {
   board:        (id)           => req('GET', `/api/board/${id}`),
   saveBoard:    (id, doc)      => req('POST', `/api/board/${id}`, doc),
   deleteBoard:  (id)           => req('DELETE', `/api/board/${id}`),
+  gc:           (id, doc)      => req('POST', `/api/board/${id}/gc`, { keep: mediaNamesOf(doc) }),
+  history:      (id)           => req('GET', `/api/board/${id}/history`),
+  version:      (id, stamp)    => req('GET', `/api/board/${id}/history/${Math.floor(stamp / 1000)}`),
+  // the desktop build serves pictures off disk by path, so nothing needs warming
+  warmThumb:    async ()       => '',
   settings:     ()             => req('GET', '/api/settings'),
   saveSettings: (patch)        => req('POST', '/api/settings', patch),
   videos:       ()             => req('GET', '/api/videos'),
+  lootmap:      ()             => req('GET', '/api/lootmap'),
   reveal:       (what, board)  => req('POST', '/api/reveal', { what, board }),
   quit:         ()             => req('POST', '/api/quit'),
   upload:       (boardId, blob, ext = 'png') =>
@@ -56,7 +74,7 @@ export async function chooseBackend() {
   let config = null;
   try { config = await (await fetch('config.json', { cache: 'no-store' })).json(); } catch { /* optional */ }
   if (config && config.api) {
-    const cloud = await import('./cloud.js?v=58e76add28');
+    const cloud = await import('./cloud.js?v=764fd7e397');
     cloud.configure(config.api);
     api = cloud.cloudApi;
     registerStaticMedia(cloud.cloudMediaUrl);
@@ -65,7 +83,7 @@ export async function chooseBackend() {
   }
 
   // 3. otherwise everything stays in this browser, encrypted
-  const vault = await import('./vault.js?v=58e76add28');
+  const vault = await import('./vault.js?v=764fd7e397');
   api = vault.localApi;
   registerStaticMedia(vault.localMediaUrl);
   mode = 'vault';
@@ -76,42 +94,121 @@ export async function chooseBackend() {
 
 export async function alreadySignedIn() {
   if (mode !== 'cloud') return false;
-  const cloud = await import('./cloud.js?v=58e76add28');
+  const cloud = await import('./cloud.js?v=764fd7e397');
   return cloud.resume();
 }
 
 export async function signIn(name, password) {
   if (mode === 'cloud') {
-    const cloud = await import('./cloud.js?v=58e76add28');
+    const cloud = await import('./cloud.js?v=764fd7e397');
     await cloud.login(name, password);
     return cloud.cloudUser();
   }
-  const vault = await import('./vault.js?v=58e76add28');
+  const vault = await import('./vault.js?v=764fd7e397');
   return (await vault.unlock(name, password)) ? vault.currentUser() : null;
 }
 
 export async function signOut() {
-  if (mode === 'cloud') (await import('./cloud.js?v=58e76add28')).logout();
-  else (await import('./vault.js?v=58e76add28')).lock();
+  if (mode === 'cloud') (await import('./cloud.js?v=764fd7e397')).logout();
+  else (await import('./vault.js?v=764fd7e397')).lock();
   location.reload();
 }
 
 export async function whoAmI() {
-  if (mode === 'cloud') return (await import('./cloud.js?v=58e76add28')).cloudUser();
-  if (mode === 'vault') return (await import('./vault.js?v=58e76add28')).currentUser();
+  if (mode === 'cloud') return (await import('./cloud.js?v=764fd7e397')).cloudUser();
+  if (mode === 'vault') return (await import('./vault.js?v=764fd7e397')).currentUser();
   return null;
 }
 
-/** media path stored in a board ("media/ab12.png") -> a url the browser can load */
+/* ------------------------------------------------------------------
+   making accounts.
+
+   only the synced build can: an account is a row in the worker's database,
+   and creating one needs an invite code an admin generated. the desktop build
+   has no accounts at all, and the browser-only vault's accounts are baked into
+   users.json at build time, so neither can grow one at runtime. both say so
+   rather than showing a form that cannot work.
+   ------------------------------------------------------------------ */
+
+export const canSignUp = () => mode === 'cloud';
+
+/** live "is that name free / is that code good", for the signup form */
+export async function checkSignup(name, code) {
+  if (mode !== 'cloud') return { name: { ok: false, why: '' }, code: { ok: false, why: '' } };
+  return (await import('./cloud.js?v=764fd7e397')).checkSignup(name, code);
+}
+
+export async function signUp(name, code, password) {
+  if (mode !== 'cloud') throw new Error('this copy cannot make accounts');
+  return (await import('./cloud.js?v=764fd7e397')).signup(name, code, password);
+}
+
+export async function resetPassword(code, password) {
+  if (mode !== 'cloud') throw new Error('this copy cannot reset passwords');
+  return (await import('./cloud.js?v=764fd7e397')).resetPassword(code, password);
+}
+
+/** the admin-only calls, or null when this build has no notion of accounts */
+export async function adminApi() {
+  if (mode !== 'cloud') return null;
+  return (await import('./cloud.js?v=764fd7e397')).adminApi;
+}
+
+/** media path stored in a board ("media/ab12.png") -> a url the browser can load.
+ *
+ *  boardId is threaded all the way through to the blob cache on purpose. it used
+ *  to be dropped here, which forced cloud and vault mode to keep one global
+ *  cache and wipe it on every board open — so building the drill list or the
+ *  cross-session search (both of which read every board) blanked the pictures on
+ *  the page you were actually looking at. */
 export function mediaUrl(boardId, src) {
   if (!src) return '';
   if (/^(https?:|data:|blob:)/.test(src)) return src;
-  if (isStatic) return staticMedia(src);
+  if (isStatic) return staticMedia(boardId, src);
   return src.startsWith('/') ? src : `/m/${boardId}/${src.replace(/^media\//, '')}`;
 }
 
 let staticMediaFn = () => '';
 export function registerStaticMedia(fn) { staticMediaFn = fn; }
-const staticMedia = (src) => staticMediaFn(src);
+const staticMedia = (boardId, src) => staticMediaFn(boardId, src);
 
 export const videoUrl = (token) => (isStatic ? token : `/v/${token}`);
+
+/* ------------------------------------------------------------------
+   the loot map's island picture.
+
+   the markers themselves ship with the app (app/lootmap/), so every backend
+   reads those from the same relative path and none of them needs a route for
+   it. the island art is the part that changes each season, so it comes from
+   fortnite-api.com — public, no key, permissive CORS, and it exists to be
+   consumed. the desktop server caches it to disk so the app still works with
+   no network; the hosted builds have nowhere to cache it, so they point the
+   <img> straight at the api and let the browser's own http cache do the job.
+
+   nothing here ever touches fortnite.gg. that is behind a bot challenge and is
+   a deliberate once-a-season manual capture — see the lootmap-capture skill.
+   ------------------------------------------------------------------ */
+
+const ISLAND_API = 'https://fortnite-api.com/v1/map';
+let islandCache = null;
+
+export async function fetchIslandDirect() {
+  if (islandCache && Date.now() - islandCache.fetched < 24 * 3600 * 1000) return islandCache;
+  try {
+    const doc = await (await fetch(ISLAND_API, { cache: 'no-store' })).json();
+    const data = doc.data || {};
+    islandCache = {
+      ok: true,
+      island: data.images?.blank || null,
+      fetched: Date.now(),
+      pois: (data.pois || [])
+        .filter((p) => p.location && typeof p.location.x === 'number')
+        .map((p) => ({ name: p.name, world: [p.location.x, p.location.y] })),
+    };
+    return islandCache;
+  } catch (err) {
+    // keep the last good copy rather than blanking the map on one bad request
+    if (islandCache) return islandCache;
+    return { ok: false, island: null, pois: [], error: String(err.message || err) };
+  }
+}

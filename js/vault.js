@@ -12,6 +12,8 @@
    installed something on your machine.
 */
 
+import { mediaNamesOf } from './api.js?v=764fd7e397';
+
 const DB_NAME = 'vodpad-web';
 const STORE = 'kv';
 const ITERATIONS = 600000;
@@ -24,11 +26,17 @@ const DEFAULT_SETTINGS = {
   gridSnap: true, snapSize: 8, lodThreshold: 0.42, sidebar: true, focusMode: false,
 };
 
+const CACHED_BOARDS = 6;   // how many boards keep their blob urls alive at once
+
 let users = null;          // from users.json
 let who = null;            // logged-in username
 let key = null;            // aes-gcm CryptoKey, memory only
 let db = null;
-const mediaCache = new Map();   // "media/xyz.png" -> object url
+
+/** boardId -> Map("media/xyz.png" -> object url). one shelf per board and the
+ *  oldest board evicted first, so reading every session to build the drill list
+ *  no longer revokes the pictures on the page you have open. */
+const media = new Map();
 
 export const currentUser = () => who;
 export const unlocked = () => !!key;
@@ -163,8 +171,31 @@ export async function unlock(name, password) {
 export function lock() {
   key = null;
   who = null;
-  for (const url of mediaCache.values()) URL.revokeObjectURL(url);
-  mediaCache.clear();
+  for (const id of [...media.keys()]) forgetMedia(id);
+  for (const url of thumbs.values()) URL.revokeObjectURL(url);
+  thumbs.clear();
+}
+
+/* ---------------------------------------------------------------- picture cache */
+
+function shelf(boardId) {
+  const existing = media.get(boardId);
+  if (existing) {                       // re-insert so it counts as recently used
+    media.delete(boardId);
+    media.set(boardId, existing);
+    return existing;
+  }
+  const fresh = new Map();
+  media.set(boardId, fresh);
+  while (media.size > CACHED_BOARDS) forgetMedia(media.keys().next().value);
+  return fresh;
+}
+
+function forgetMedia(boardId) {
+  const shelfFor = media.get(boardId);
+  if (!shelfFor) return;
+  for (const url of shelfFor.values()) URL.revokeObjectURL(url);
+  media.delete(boardId);
 }
 
 /* ---------------------------------------------------------------- meta */
@@ -212,6 +243,30 @@ function blankBoard(id, title) {
 
 const slug = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'session';
 
+/* ---------------------------------------------------------------- history
+
+   the browser-only twin of the desktop build's .history folder. snapshots are
+   sealed like everything else, throttled so typing does not mint one per
+   keystroke, and capped so indexeddb's quota stays somebody else's problem. */
+
+const HISTORY_KEEP = 12;
+const HISTORY_EVERY = 5 * 60 * 1000;
+const lastSnap = new Map();
+
+async function snapshot(boardId) {
+  const now = Date.now();
+  if (now - (lastSnap.get(boardId) || 0) < HISTORY_EVERY) return;
+  lastSnap.set(boardId, now);
+  try {
+    const current = await get(mine(`board:${boardId}`));
+    if (!current) return;                       // nothing to snapshot yet
+    await put(mine(`hist:${boardId}:${now}`), current);
+    const keys = (await keysWith(`${who}/hist:${boardId}:`))
+      .sort((a, b) => Number(b.split(':').pop()) - Number(a.split(':').pop()));
+    for (const stale of keys.slice(HISTORY_KEEP)) await del(stale);
+  } catch { /* a snapshot is a nicety — never fail the save over one */ }
+}
+
 /* ---------------------------------------------------------------- the adapter */
 
 export const localApi = {
@@ -247,16 +302,63 @@ export const localApi = {
   },
 
   async saveBoard(id, doc) {
+    // snapshot what is being replaced, before replacing it
+    await snapshot(id);
     doc.updated = Date.now();
     await put(mine(`board:${id}`), await sealJson(doc));
     return { ok: true, updated: doc.updated, meta: boardMeta(id, doc) };
   },
 
+  async history(id) {
+    const versions = [];
+    for (const k of await keysWith(`${who}/hist:${id}:`)) {
+      try {
+        const doc = await unsealJson(await get(k));
+        const meta = boardMeta(id, doc);
+        versions.push({
+          stamp: Number(k.split(`hist:${id}:`)[1]),
+          bytes: 0, title: meta.title,
+          cards: meta.cardCount, notes: meta.noteCount, shots: meta.shotCount,
+        });
+      } catch { /* skip an unreadable snapshot */ }
+    }
+    versions.sort((a, b) => b.stamp - a.stamp);
+    return { versions };
+  },
+
+  async version(id, stamp) {
+    const rec = await get(mine(`hist:${id}:${stamp}`));
+    if (!rec) throw new Error('no such version');
+    return unsealJson(rec);
+  },
+
   async deleteBoard(id) {
     await del(mine(`board:${id}`));
     for (const k of await keysWith(`${who}/media:${id}:`)) await del(k);
+    for (const k of await keysWith(`${who}/hist:${id}:`)) await del(k);
+    forgetMedia(id);
     return { ok: true };
   },
+
+  /** drop the sealed blobs for pictures the document no longer references.
+   *  indexeddb has a quota like anything else, and a deleted screenshot used to
+   *  sit in it forever. */
+  async gc(id, doc) {
+    const live = new Set(mediaNamesOf(doc));
+    let freed = 0, bytes = 0;
+    for (const k of await keysWith(`${who}/media:${id}:`)) {
+      const name = k.split(`media:${id}:`)[1];
+      if (live.has(name)) continue;
+      const rec = await get(k);
+      bytes += Math.round((rec?.ct?.length || 0) * 0.75);
+      await del(k);
+      freed++;
+    }
+    if (freed) forgetMedia(id);
+    return { ok: true, freed, bytes };
+  },
+
+  warmThumb,
 
   async settings() {
     const rec = await get(mine('settings'));
@@ -271,6 +373,9 @@ export const localApi = {
   },
 
   videos: async () => ({ roots: [], files: [], local: true }),
+  // same as cloud: nothing local to cache into, so the api url goes straight
+  // into the <img> and the browser cache does the work
+  lootmap: async () => (await import('./api.js?v=764fd7e397')).fetchIslandDirect(),
   reveal: async () => ({ ok: false }),
   quit: async () => ({ ok: false }),
 
@@ -281,32 +386,58 @@ export const localApi = {
     const name = `${(await sha256hex(bytes)).slice(0, 24)}.${ext}`;
     const src = `media/${name}`;
     await put(mine(`media:${boardId}:${name}`), { ...(await seal(bytes)), type });
-    mediaCache.set(src, URL.createObjectURL(new Blob([bytes], { type })));
+    shelf(boardId).set(src, URL.createObjectURL(new Blob([bytes], { type })));
     return { ok: true, src, bytes: bytes.length };
   },
 };
 
 async function loadMediaFor(boardId) {
-  for (const url of mediaCache.values()) URL.revokeObjectURL(url);
-  mediaCache.clear();
+  const into = shelf(boardId);
   for (const k of await keysWith(`${who}/media:${boardId}:`)) {
+    const name = k.split(`media:${boardId}:`)[1];
+    if (into.has(`media/${name}`)) continue;
     try {
       const rec = await get(k);
       const bytes = await unseal(rec);
-      const name = k.split(`media:${boardId}:`)[1];
-      mediaCache.set(`media/${name}`, URL.createObjectURL(new Blob([bytes], { type: rec.type || 'image/png' })));
+      into.set(`media/${name}`, URL.createObjectURL(new Blob([bytes], { type: rec.type || 'image/png' })));
     } catch { /* a corrupt blob shouldn't take the page down */ }
   }
 }
 
-export function localMediaUrl(src) {
+/* dashboard tiles get their own small cache. warming twenty of them through the
+   per-board shelves would create twenty shelves and evict the open session. */
+const thumbs = new Map();
+const THUMB_CACHE = 60;
+
+/** one picture, for a dashboard tile, without unsealing the whole session */
+async function warmThumb(boardId, src) {
+  if (!who || !src) return '';
+  const name = src.replace(/^media\//, '');
+  const key2 = `${boardId}/${name}`;
+  if (thumbs.has(key2)) return thumbs.get(key2);
+  try {
+    const rec = await get(mine(`media:${boardId}:${name}`));
+    if (!rec) return '';
+    const url = URL.createObjectURL(new Blob([await unseal(rec)], { type: rec.type || 'image/png' }));
+    thumbs.set(key2, url);
+    while (thumbs.size > THUMB_CACHE) {
+      const oldest = thumbs.keys().next().value;
+      URL.revokeObjectURL(thumbs.get(oldest));
+      thumbs.delete(oldest);
+    }
+    return url;
+  } catch { return ''; }
+}
+
+export function localMediaUrl(boardId, src) {
   if (!src) return '';
   if (/^(https?:|data:|blob:)/.test(src)) return src;
-  return mediaCache.get(src.startsWith('media/') ? src : `media/${src}`) || '';
+  const name = src.replace(/^media\//, '');
+  return media.get(boardId)?.get(`media/${name}`) || thumbs.get(`${boardId}/${name}`) || '';
 }
 
 // hand the resolver to api.js so mediaUrl() stays synchronous everywhere else
-import('./api.js?v=58e76add28').then((m) => m.registerStaticMedia(localMediaUrl));
+import('./api.js?v=764fd7e397').then((m) => m.registerStaticMedia(localMediaUrl));
 
 /* ---------------------------------------------------------------- backups
 

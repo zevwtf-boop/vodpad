@@ -1,8 +1,8 @@
 /* the single source of truth: state, mutations, undo, autosave.
    nothing renders from here — surfaces subscribe to the bus and redraw. */
 
-import { api, isStatic } from './api.js?v=58e76add28';
-import { emitter, uid, debounce, stripHtml } from './util.js?v=58e76add28';
+import { api, isStatic, mode, mediaNamesOf } from './api.js?v=764fd7e397';
+import { emitter, uid, debounce, stripHtml } from './util.js?v=764fd7e397';
 
 export const bus = emitter();
 
@@ -127,6 +127,12 @@ export function scheduleSave() {
   saveTimer = setTimeout(saveNow, state.settings.autosaveMs || 400);
 }
 
+/* the stamp the open document was last known to match on the server. every
+   save carries it, and the worker refuses a save built on something older than
+   what it holds — otherwise an admin and an owner editing the same session
+   silently overwrite each other and one of them loses the lot. */
+let base = 0;
+
 export async function saveNow() {
   clearTimeout(saveTimer);
   if (!state.board) return;
@@ -134,7 +140,11 @@ export async function saveNow() {
   saving = true;
   setStatus('saving');
   try {
-    const res = await api.saveBoard(state.board.id, state.board);
+    // only the synced backend understands `base`; the other two would write it
+    // straight into the stored document
+    const payload = mode === 'cloud' ? { ...state.board, base } : state.board;
+    const res = await api.saveBoard(state.board.id, payload);
+    if (res.updated) base = res.updated;
     if (res.meta) {
       const i = state.boards.findIndex((b) => b.id === res.meta.id);
       if (i >= 0) state.boards[i] = res.meta; else state.boards.unshift(res.meta);
@@ -142,12 +152,25 @@ export async function saveNow() {
     }
     setStatus('saved');
   } catch (err) {
-    console.error('save failed', err);
-    setStatus('error');
+    if (/somebody else saved/i.test(err.message || '')) {
+      setStatus('conflict');
+      bus.emit('conflict', { boardId: state.board.id });
+    } else {
+      console.error('save failed', err);
+      setStatus('error');
+    }
   } finally {
     saving = false;
     if (again) { again = false; scheduleSave(); }
   }
+}
+
+/** push what is in front of you over the top of the server's copy. the user's
+ *  choice to make — it is their session either way. */
+export async function forceSave() {
+  if (!state.board) return;
+  base = 0;
+  return saveNow();
 }
 
 function setStatus(status) {
@@ -178,21 +201,51 @@ window.addEventListener('beforeunload', () => {
 
 /* ---------------------------------------------------------------- boards */
 
+/* pictures the session held when it was opened. anything in here that the
+   document no longer references is dead weight — a deleted screenshot used to
+   sit in the database (or on disk) forever. it is swept on close rather than on
+   save, because until the undo stack is thrown away the deletion is reversible
+   and the picture has to still be there. */
+let shotsAtOpen = [];
+
+/** sweep the pictures the outgoing session dropped.
+ *
+ *  only ever runs on a document that matches what the backend holds. a doc that
+ *  failed to save, or lost a conflict, is behind the stored copy — sweeping
+ *  against it would delete pictures the winning copy still points at. */
+function sweepShots(doc) {
+  const before = shotsAtOpen;
+  shotsAtOpen = [];
+  if (!before.length || !doc || !api.gc || state.save.status !== 'saved') return;
+  const live = new Set(mediaNamesOf(doc));
+  if (!before.some((name) => !live.has(name))) return;
+  // fire and forget: nothing on screen depends on it, and it must not hold up
+  // opening the session you actually asked for
+  api.gc(doc.id, doc).catch((e) => console.warn('could not tidy old pictures', e));
+}
+
 export async function openBoard(id) {
+  const leaving = state.board;
   const doc = await api.board(id);
+  if (leaving && leaving.id !== id) sweepShots(leaving);
   state.board = doc;
   state.cardId = doc.openCardId && doc.cards[doc.openCardId] ? doc.openCardId : doc.rootId;
   undoStack.length = redoStack.length = 0;
   coalesceKey = null;
+  base = doc.updated || 0;
+  shotsAtOpen = mediaNamesOf(doc);
   setStatus('saved');
   bus.emit('board:open', doc);
   return doc;
 }
 
 export function closeBoard() {
+  const doc = state.board;
   state.board = null;
   state.cardId = null;
   undoStack.length = redoStack.length = 0;
+  base = 0;
+  sweepShots(doc);
 }
 
 export async function createBoard(title) {
@@ -289,6 +342,17 @@ export function reparentCard(id, newParentId, pos = {}) {
     (b.cards[newParentId].children ||= []).push(id);
   });
 }
+
+/* ---------------------------------------------------------------- severity
+
+   what the four flags mean, in one place. this list used to be written out
+   three times — the card menu, the flag picker and the drills tab — and they
+   have to agree, because 2 against 3 on the same tag is the whole progress
+   read the pattern finder is built on. */
+
+export const SEV_LABEL = ['no flag', 'working on it', 'costs me games', 'fixed — keep doing it'];
+export const SEV_SHORT = ['', 'working on it', 'costing games', 'fixed'];
+export const SEV_ORDER = [2, 1, 3];              // worst first
 
 /* ---------------------------------------------------------------- titles + tags */
 

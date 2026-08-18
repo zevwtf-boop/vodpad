@@ -1,10 +1,10 @@
 /* router + top bar chrome. three surfaces, one history stack. */
 
-import { $, $$, h, clear } from './util.js?v=58e76add28';
-import { icon } from './icons.js?v=58e76add28';
-import { state, bus, openBoard, saveNow, pathTo, cardTitle, card } from './store.js?v=58e76add28';
-import { ghostTo } from './motion.js?v=58e76add28';
-import { toast } from './ui.js?v=58e76add28';
+import { $, $$, h, clear } from './util.js?v=764fd7e397';
+import { icon } from './icons.js?v=764fd7e397';
+import { state, bus, openBoard, closeBoard, saveNow, pathTo, cardTitle, card, forceSave } from './store.js?v=764fd7e397';
+import { ghostTo } from './motion.js?v=764fd7e397';
+import { toast, openModal } from './ui.js?v=764fd7e397';
 
 const SURFACE = { dash: '#surface-dash', board: '#surface-board', page: '#surface-page' };
 const mounts = {};
@@ -139,12 +139,68 @@ function paintOwner(meta) {
 
 /* save light */
 
+const SAVE_WORD = {
+  error: 'not saved', conflict: 'clash', saved: 'saved', dirty: 'saving…', saving: 'saving…',
+};
+
 bus.on('save', (save) => {
   const el = $('#save-state');
   if (!el) return;
   el.classList.toggle('dirty', save.status === 'dirty' || save.status === 'saving');
-  el.classList.toggle('error', save.status === 'error');
+  el.classList.toggle('error', save.status === 'error' || save.status === 'conflict');
   el.classList.toggle('show', state.route.name !== 'dash');
-  el.querySelector('span').textContent =
-    save.status === 'error' ? 'not saved' : save.status === 'saved' ? 'saved' : 'saving…';
+  el.querySelector('span').textContent = SAVE_WORD[save.status] || 'saving…';
+});
+
+/* two people in one session.
+   the worker turns down a save built on an older copy rather than letting the
+   last writer flatten the other one in silence. that only leaves a choice, and
+   it is not ours to make — so ask, and say plainly what each answer costs. */
+let askingAboutClash = false;
+
+bus.on('conflict', async () => {
+  if (askingAboutClash || !state.board) return;
+  askingAboutClash = true;
+  const route = state.route;
+  const meta = state.boards.find((b) => b.id === state.board.id);
+  const who = meta && meta.mine === false ? meta.owner : 'someone else';
+
+  try {
+    const pick = await openModal({
+      title: 'this session changed underneath you',
+      width: 470,
+      body: h('div',
+        h('p.modal-text', { text: `${who} saved this session while you had it open, so your copy `
+          + 'and theirs have drifted apart. there is no way to keep both — one of them wins.' }),
+        h('p.modal-text.dim', { text: 'nothing is written until you pick. closing this leaves your '
+          + 'copy on screen, unsaved.' })),
+      actions: [
+        { label: 'see earlier versions', value: 'history' },
+        { label: 'take theirs', value: 'theirs' },
+        { label: 'keep mine', value: 'mine', kind: 'danger' },
+      ],
+    });
+
+    if (pick === 'history') {
+      // looking does not resolve the clash, so leave the door open to come back
+      await (await import('./history.js?v=764fd7e397')).openHistory();
+      askingAboutClash = false;
+      bus.emit('conflict', {});
+      return;
+    }
+
+    if (pick === 'mine') {
+      await forceSave();
+      toast('saved over their copy', { kind: 'ok' });
+    } else if (pick === 'theirs') {
+      const id = state.board.id;
+      closeBoard();
+      await go({ ...route, boardId: id });
+      toast('reloaded their copy', { kind: 'ok' });
+    }
+  } catch (err) {
+    toast(String(err.message || err), { kind: 'error' });
+  } finally {
+    askingAboutClash = false;
+  }
 });

@@ -5,13 +5,13 @@
    editable, and it is what notion/craft do too.
 */
 
-import { h, $, $$, uid, clamp, stripHtml, sanitizeInline, modKey, debounce } from './util.js?v=58e76add28';
-import { icon } from './icons.js?v=58e76add28';
-import { state, card, commit, quietly, syncTags, bus, undo } from './store.js?v=58e76add28';
-import { contextMenu, toast } from './ui.js?v=58e76add28';
-import { animate, EASE } from './motion.js?v=58e76add28';
-import { renderImageBlock } from './images.js?v=58e76add28';
-import { openSlashMenu, closeSlashMenu, slashOpen } from './toolbar.js?v=58e76add28';
+import { h, $, $$, uid, clamp, stripHtml, sanitizeInline, modKey, debounce } from './util.js?v=764fd7e397';
+import { icon } from './icons.js?v=764fd7e397';
+import { state, card, commit, quietly, syncTags, bus, undo } from './store.js?v=764fd7e397';
+import { contextMenu, toast } from './ui.js?v=764fd7e397';
+import { animate, EASE } from './motion.js?v=764fd7e397';
+import { renderImageBlock } from './images.js?v=764fd7e397';
+import { openSlashMenu, closeSlashMenu, slashOpen } from './toolbar.js?v=764fd7e397';
 
 export const TEXT_TYPES = new Set(['p', 'h1', 'h2', 'h3', 'quote', 'callout', 'ul', 'ol', 'todo']);
 export const LIST_TYPES = new Set(['ul', 'ol', 'todo']);
@@ -151,7 +151,7 @@ function subPageEl(block) {
   return h('button.subpage-block', {
     on: {
       click: async (e) => {
-        const { openCardPage } = await import('./nav.js?v=58e76add28');
+        const { openCardPage } = await import('./nav.js?v=764fd7e397');
         openCardPage(kid.id, e.currentTarget);
       },
     },
@@ -844,7 +844,7 @@ async function onPaste(e, body, blockId) {
   if (imageItem) {
     e.preventDefault();
     const file = imageItem.getAsFile();
-    const { insertImageFromFile } = await import('./images.js?v=58e76add28');
+    const { insertImageFromFile } = await import('./images.js?v=764fd7e397');
     insertImageFromFile(file, blockId);
     return;
   }

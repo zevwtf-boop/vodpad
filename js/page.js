@@ -2,18 +2,19 @@
    a main column, a margin gutter for side notes, and a free layer you can
    drop text anywhere on. */
 
-import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=58e76add28';
-import { icon } from './icons.js?v=58e76add28';
-import { mediaUrl } from './api.js?v=58e76add28';
-import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting } from './store.js?v=58e76add28';
-import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=58e76add28';
-import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=58e76add28';
-import { initSelectionToolbar } from './toolbar.js?v=58e76add28';
-import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=58e76add28';
-import { stagger, animate, ping, EASE } from './motion.js?v=58e76add28';
-import { paintAnchors } from './anchors.js?v=58e76add28';
-import { mountVideoPanel } from './video.js?v=58e76add28';
-import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=58e76add28';
+import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=764fd7e397';
+import { icon } from './icons.js?v=764fd7e397';
+import { mediaUrl } from './api.js?v=764fd7e397';
+import { stampsOnCard, tidy, clipLines } from './stamps.js?v=764fd7e397';
+import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting, SEV_LABEL, SEV_ORDER } from './store.js?v=764fd7e397';
+import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=764fd7e397';
+import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=764fd7e397';
+import { initSelectionToolbar } from './toolbar.js?v=764fd7e397';
+import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=764fd7e397';
+import { stagger, animate, ping, EASE } from './motion.js?v=764fd7e397';
+import { paintAnchors } from './anchors.js?v=764fd7e397';
+import { mountVideoPanel } from './video.js?v=764fd7e397';
+import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=764fd7e397';
 
 let host = null;
 let sheet = null;
@@ -293,6 +294,7 @@ const SIDE_TABS = [
   ['timeline', 'timeline', 'clock', 'every timestamp — click one to jump the vod'],
   ['drills', 'drills', 'drill', 'every flagged note, worst first'],
   ['tags', 'tags', 'tag', 'click a tag and the rest of the page fades back'],
+  ['links', 'links', 'link', 'text tied to a picture, and arrows on the map'],
   ['add', 'add', 'plus', 'drop something into the page'],
 ];
 
@@ -360,6 +362,7 @@ export function paintSide() {
   else if (sideTab === 'timeline') paintTimeline(body, c);
   else if (sideTab === 'drills') paintDrills(body, c);
   else if (sideTab === 'tags') paintTags(body, c);
+  else if (sideTab === 'links') paintLinks(body, c);
   else paintAddPalette(body, c);
 
   applyTagDim();
@@ -408,7 +411,7 @@ function paintShots(body, c) {
   if (!shots.length) {
     body.append(h('div.side-empty',
       h('p', { text: 'paste a screenshot with ctrl+v and it lands here.' }),
-      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=58e76add28')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=764fd7e397')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
         icon('image', { size: 13 }), 'add a picture')));
     return;
   }
@@ -431,43 +434,17 @@ function paintShots(body, c) {
    and clicking one seeks the vod and walks you to where the note lives.
 */
 
-const CHIP_RE = /<span[^>]*\bdata-t="([\d.]+)"[^>]*>[\s\S]*?<\/span>/gi;
-
-const tidy = (html, cap = 90) => {
-  const text = stripHtml(String(html || '')).replace(/\s+/g, ' ').trim();
-  return text.length > cap ? `${text.slice(0, cap)}…` : text;
-};
-
-/** pull every stamp out of one chunk of html, each with the words that follow it */
-function stampsIn(html) {
-  const src = String(html || '');
-  const spans = [];
-  CHIP_RE.lastIndex = 0;
-  for (let m = CHIP_RE.exec(src); m; m = CHIP_RE.exec(src)) {
-    if (spans.length) spans[spans.length - 1].to = m.index;
-    spans.push({ t: Number(m[1]), from: m.index + m[0].length, to: src.length });
-  }
-  const whole = tidy(src.replace(CHIP_RE, ' '));
-  return spans.map((s) => ({ t: s.t, text: tidy(src.slice(s.from, s.to)) || whole }));
-}
+/* CHIP_RE, tidy() and the stamp scan live in stamps.js, so the whole-session
+   clip export reads exactly the same rows this tab does. */
 
 function timelineRows(c) {
-  const rows = [];
-  const take = (html, kind, ref) => {
-    for (const s of stampsIn(html)) rows.push({ ...s, kind, ref });
-  };
-
-  for (const block of c.blocks || []) {
-    take(block.html, 'block', block.id);
-    if (block.caption) take(block.caption, 'block', block.id);
-  }
-  for (const note of c.side || []) take(note.html, 'side', note.id);
-  for (const box of c.free || []) take(box.html, 'free', box.id);
+  const rows = stampsOnCard(c);
+  // this tab is scoped to the page you are on, so it takes direct children too
+  // — the whole-session version in stamps.js visits every card instead
   for (const kid of childrenOf(c.id)) {
     if (kid.t === null || kid.t === undefined) continue;
     rows.push({ t: Number(kid.t), text: cardTitle(kid), kind: 'card', ref: kid.id });
   }
-
   return rows.filter((r) => Number.isFinite(r.t)).sort((a, b) => a.t - b.t);
 }
 
@@ -476,7 +453,7 @@ function paintTimeline(body, c) {
   if (!rows.length) {
     body.append(h('div.side-empty',
       h('p', { text: 'press t while the vod plays and the moment lands here.' }),
-      h('button.btn.btn-sm', { on: { click: async () => (await import('./video.js?v=58e76add28')).insertTimestamp(currentBlockId() || c.blocks.at(-1)?.id) } },
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./video.js?v=764fd7e397')).insertTimestamp(currentBlockId() || c.blocks.at(-1)?.id) } },
         icon('clock', { size: 13 }), 'stamp this moment')));
     return;
   }
@@ -500,7 +477,7 @@ function paintTimeline(body, c) {
 }
 
 async function goToStamp(row) {
-  try { (await import('./video.js?v=58e76add28')).seekTo(row.t); } catch { /* no video panel is fine */ }
+  try { (await import('./video.js?v=764fd7e397')).seekTo(row.t); } catch { /* no video panel is fine */ }
   if (row.kind === 'card') { openCardPage(row.ref); return; }
   if (row.kind === 'block') { jumpToBlock(row.ref); return; }
   const el = $(row.kind === 'side' ? `.sidenote[data-id="${CSS.escape(row.ref)}"]` : `.freebox[data-id="${CSS.escape(row.ref)}"]`);
@@ -510,7 +487,7 @@ async function goToStamp(row) {
 }
 
 async function copyClipList(rows) {
-  const text = rows.map((r) => `${fmtClock(r.t)} ${r.text}`.trim()).join('\n');
+  const text = clipLines(rows);
   try {
     await navigator.clipboard.writeText(text);
     toast(`${rows.length} timestamp${rows.length === 1 ? '' : 's'} copied`, { kind: 'ok', ms: 1800 });
@@ -525,8 +502,7 @@ async function copyClipList(rows) {
    same severities as the dashboard drill list, scoped to where you are.
 */
 
-const SEV_LABEL = ['no flag', 'working on it', 'costs me games', 'fixed — keep doing it'];
-const SEV_ORDER = [2, 1, 3];
+/* SEV_LABEL / SEV_ORDER live in store.js — see the note there */
 
 function subtreeOf(id) {
   const out = [];
@@ -671,7 +647,7 @@ function paintAddPalette(body, c) {
   const at = () => currentBlockId() || lastId();
 
   const add = async (type, extra) => {
-    const ed = await import('./editor.js?v=58e76add28');
+    const ed = await import('./editor.js?v=764fd7e397');
     const made = ed.insertBlock(at(), { type: 'p' }, false);
     if (type === 'p') { ed.focusBlock(made.id, 'end'); return; }
     ed.setType(made.id, type, extra);
@@ -689,11 +665,11 @@ function paintAddPalette(body, c) {
     ['code', 'codeTag', () => add('code')],
     ['divider', 'divider', () => add('divider')],
     ['table', 'table', () => add('table', { rows: [['', '', ''], ['', '', ''], ['', '', '']], header: true })],
-    ['picture', 'image', async () => (await import('./images.js?v=58e76add28')).pickImageFile(at())],
+    ['picture', 'image', async () => (await import('./images.js?v=764fd7e397')).pickImageFile(at())],
     ['text box', 'textbox', () => addFreeBox()],
     ['margin note', 'sidenote', () => addSidenoteFromSelection()],
     ['sub-page', 'cards', () => addSubPage(at())],
-    ['timestamp', 'clock', async () => (await import('./video.js?v=58e76add28')).insertTimestamp(at())],
+    ['timestamp', 'clock', async () => (await import('./video.js?v=764fd7e397')).insertTimestamp(at())],
   ];
 
   body.append(h('div.side-grid', ...items.map(([label, ico, run]) => h('button.side-add', {
@@ -715,6 +691,62 @@ function paintStats() {
   ];
   if (s.todo) bits.push([`${s.done}/${s.todo}`, 'done']);
   for (const [n, label] of bits) host.append(h('div.side-stat', h('b', { text: n }), h('span', { text: label })));
+}
+
+/* ---------------------------------------------------------------- links
+
+   two different things that both mean "these two are connected", and both were
+   invisible unless you happened to hover the right thing: `card.anchors[]` ties
+   a line of text to a picture (or to one numbered pin on it), and
+   `board.links[]` is an arrow between two cards on the map.
+*/
+
+function paintLinks(body, c) {
+  const anchors = (c.anchors || []).filter((a) => a.blockId && a.target);
+  const kids = new Set(childrenOf(c.id).map((k) => k.id));
+  const arrows = (state.board.links || []).filter((l) => kids.has(l.from) && kids.has(l.to));
+
+  if (!anchors.length && !arrows.length) {
+    body.append(h('div.side-empty',
+      h('p', { text: 'nothing on this page is tied to anything yet.' }),
+      h('p', { text: 'select a line and press ctrl+l to tie it to a picture, or press tab on the map to branch a card with an arrow.' })));
+    return;
+  }
+
+  if (anchors.length) {
+    body.append(h('div.side-group',
+      h('span.side-text', { text: 'text tied to a picture' }),
+      h('span.side-count', { text: String(anchors.length) })));
+    const list = h('div.side-list');
+    for (const a of anchors) {
+      const from = (c.blocks || []).find((b) => b.id === a.blockId);
+      const shotIndex = (c.blocks || []).filter((b) => b.type === 'image').findIndex((b) => b.id === a.target);
+      list.append(h('button.side-row', {
+        tip: 'go to the line',
+        on: { click: () => jumpToBlock(a.blockId) },
+      },
+        h('span.side-ico', icon('link', { size: 12 })),
+        h('span.side-text', { text: tidy(from?.html, 40) || 'a line of text' }),
+        h('span.side-count', { text: a.pin ? `pin ${a.pin.slice(-2)}` : `shot ${shotIndex >= 0 ? shotIndex + 1 : '?'}` })));
+    }
+    body.append(list);
+  }
+
+  if (arrows.length) {
+    body.append(h('div.side-group',
+      h('span.side-text', { text: 'arrows on the map' }),
+      h('span.side-count', { text: String(arrows.length) })));
+    const list = h('div.side-list');
+    for (const l of arrows) {
+      list.append(h('button.side-row', {
+        tip: 'open the map on these two',
+        on: { click: () => go({ name: 'board', boardId: state.board.id, cardId: state.cardId }) },
+      },
+        h('span.side-ico', icon('forward', { size: 12 })),
+        h('span.side-text', { text: `${cardTitle(card(l.from))} → ${cardTitle(card(l.to))}` })));
+    }
+    body.append(list);
+  }
 }
 
 function jumpToBlock(blockId) {
@@ -739,7 +771,7 @@ export function markOutlinePosition() {
 }
 
 async function addHeading() {
-  const ed = await import('./editor.js?v=58e76add28');
+  const ed = await import('./editor.js?v=764fd7e397');
   const last = card(state.cardId).blocks.at(-1)?.id;
   const made = ed.insertBlock(last, { type: 'p' }, false);
   ed.setType(made.id, 'h2');
@@ -800,7 +832,7 @@ function paintMeta() {
   if (c.t !== null && c.t !== undefined) {
     wrap.append(h('button.chip.chip-time', {
       tip: 'jump the video here',
-      on: { click: async () => (await import('./video.js?v=58e76add28')).seekTo(c.t) },
+      on: { click: async () => (await import('./video.js?v=764fd7e397')).seekTo(c.t) },
     }, icon('clock', { size: 12 }), fmtClock(c.t)));
   }
 
@@ -811,12 +843,11 @@ function paintMeta() {
 }
 
 function sevPicker(c) {
-  const labels = ['no flag', 'working on it', 'costs me games', 'fixed — keep doing it'];
   const wrap = h('div.sev-picker');
   for (let lvl = 0; lvl <= 3; lvl++) {
     wrap.append(h('button.sev-btn', {
       class: `${(c.severity || 0) === lvl ? 'on' : ''} sev-${lvl}`,
-      tip: `${labels[lvl]} · press ${lvl + 1}`,
+      tip: `${SEV_LABEL[lvl]} · press ${lvl + 1}`,
       on: { click: () => setSeverity(c.id, lvl) },
     }, lvl === 0 ? icon('minus', { size: 11 }) : h('span.sev-dot', { class: `sev-${lvl}` })));
   }
@@ -836,13 +867,13 @@ function tagMenu(anchor) {
   const existing = allTags().map(([t]) => t).filter((t) => !(c.tags || []).includes(t));
   const input = h('input.field', { placeholder: 'new tag…', spellcheck: false });
   const list = h('div.tag-pop-list', ...existing.slice(0, 8).map((t) => h('button.menu-row', {
-    on: { click: () => { addTag(t); import('./ui.js?v=58e76add28').then((m) => m.closePopover()); } },
+    on: { click: () => { addTag(t); import('./ui.js?v=764fd7e397').then((m) => m.closePopover()); } },
   }, h('span.menu-ico', { text: '#' }), h('span.menu-label', { text: t }))));
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const value = input.value.trim().replace(/^#/, '').toLowerCase().replace(/\s+/g, '-');
       if (value) addTag(value);
-      import('./ui.js?v=58e76add28').then((m) => m.closePopover());
+      import('./ui.js?v=764fd7e397').then((m) => m.closePopover());
     }
   });
   popover(h('div.tag-pop', input, existing.length ? list : null), { anchor, width: 210 });
@@ -863,14 +894,23 @@ function pageMenu(anchor) {
   const c = card(state.cardId);
   contextMenu([
     { label: 'open the map', icon: 'grid', hint: 'ctrl+b', onPick: () => toggleMap() },
-    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=58e76add28')).openReader() },
+    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=764fd7e397')).openReader() },
     { sep: true },
     { label: 'add a sub-page', icon: 'cards', onPick: () => addSubPage(null) },
     { label: 'floating text box', icon: 'textbox', hint: 'ctrl+shift+t', onPick: () => addFreeBox() },
     { sep: true },
-    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=58e76add28')).exportMarkdown(c.id) },
-    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=58e76add28')).exportHtml(c.id) },
-    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=58e76add28')).exportSession(state.board.id) },
+    { label: 'loot routes', icon: 'target', hint: 'map',
+      onPick: async () => (await import('./lootmap.js?v=764fd7e397')).openLootmap() },
+    { label: 'earlier versions of this session', icon: 'history',
+      onPick: async () => (await import('./history.js?v=764fd7e397')).openHistory() },
+    { label: 'save this page as a template', icon: 'copy', hint: 'reuse',
+      onPick: async () => (await import('./templates.js?v=764fd7e397')).saveAsTemplate(c) },
+    { sep: true },
+    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=764fd7e397')).exportMarkdown(c.id) },
+    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=764fd7e397')).exportHtml(c.id) },
+    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=764fd7e397')).exportSession(state.board.id) },
+    { label: 'export the clip list', icon: 'clock', hint: '.csv',
+      onPick: async () => (await import('./exporter.js?v=764fd7e397')).exportClipList(state.board, { csv: true }) },
     ...(c.parent ? [{ sep: true }, { label: 'delete this page', icon: 'trash', danger: true, onPick: () => removePage(c) }] : []),
   ], { anchor, align: 'end' });
 }
@@ -956,7 +996,7 @@ export function addSidenoteFromSelection() {
   const noteId = uid('sn');
   const sel = getSelection();
   if (sel && !sel.isCollapsed) {
-    import('./editor.js?v=58e76add28').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
+    import('./editor.js?v=764fd7e397').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
   } else {
     const mark = document.createElement('span');
     mark.setAttribute('data-side', noteId);
@@ -1132,7 +1172,7 @@ function freeBoxEl(box) {
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      import('./whiteboard.js?v=58e76add28').then(({ STICKY_COLOURS }) => {
+      import('./whiteboard.js?v=764fd7e397').then(({ STICKY_COLOURS }) => {
         contextMenu([
           { row: STICKY_COLOURS.map((c) => ({ icon: 'callout', color: c, tip: 'recolour', onPick: () => {
             const cardId = state.cardId;

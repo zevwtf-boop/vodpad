@@ -1,11 +1,11 @@
 /* turning a page (and everything nested under it) into a clean document —
    used by read mode, by markdown/html export, and by print-to-pdf. */
 
-import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=58e76add28';
-import { mediaUrl } from './api.js?v=58e76add28';
-import { state, card, childrenOf, cardTitle } from './store.js?v=58e76add28';
-import { paintStrokes } from './images.js?v=58e76add28';
-import { toast } from './ui.js?v=58e76add28';
+import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=764fd7e397';
+import { mediaUrl } from './api.js?v=764fd7e397';
+import { state, card, childrenOf, cardTitle } from './store.js?v=764fd7e397';
+import { paintStrokes } from './images.js?v=764fd7e397';
+import { toast } from './ui.js?v=764fd7e397';
 
 /* ---------------------------------------------------------------- dom render */
 
@@ -204,6 +204,35 @@ function mdInline(html) {
 }
 
 /* ---------------------------------------------------------------- files out */
+
+/* ---------------------------------------------------------------- clip list
+
+   every timestamp in the session, in one file, for whoever is cutting the
+   video. the sidebar's timeline tab does this for one page; this does the whole
+   thing, and both read the same scan out of stamps.js.
+*/
+
+export async function exportClipList(doc, { csv = false } = {}) {
+  const { stampsInDoc, clipCsv, clipLines } = await import('./stamps.js?v=764fd7e397');
+  const rows = stampsInDoc(doc);
+
+  if (!rows.length) {
+    toast('no timestamps in this session — press t while the vod plays', { kind: 'warn', ms: 4200 });
+    return 0;
+  }
+
+  const stem = (doc.title || 'session').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'session';
+  if (csv) {
+    // a bom, or excel reads utf-8 as latin-1 and mangles every accent
+    download(`${stem}-clips.csv`, '﻿' + clipCsv(rows, { session: doc.title || '' }), 'text/csv;charset=utf-8');
+  } else {
+    const head = [doc.title || 'session', doc.video?.label ? `vod: ${doc.video.label}` : null, '']
+      .filter((l) => l !== null).join('\n');
+    download(`${stem}-clips.txt`, head + clipLines(rows) + '\n');
+  }
+  toast(`${rows.length} timestamp${rows.length === 1 ? '' : 's'} exported`, { kind: 'ok' });
+  return rows.length;
+}
 
 export function exportMarkdown(cardId) {
   const c = card(cardId);

@@ -66,11 +66,13 @@
   border-radius: var(--radius-sm);
   background: var(--bg-0);
   border: 1px solid var(--line);
-  opacity: 0; transform: translateY(-3px);
-  transition: opacity var(--d1), transform var(--d1);
+  /* visible at rest, not conjured by hover — a control you cannot see is a
+     control that reads as missing. it just steps back until you look at it. */
+  opacity: .5;
+  transition: opacity var(--d1);
   z-index: 3;
 }
-.node:hover .node-tools, .node.picked .node-tools { opacity: 1; transform: none; }
+.node:hover .node-tools, .node.picked .node-tools, .node-tools:focus-within { opacity: 1; }
 .node-tool {
   width: 24px; height: 22px; display: grid; place-items: center;
   border: 0; border-radius: var(--radius-sm); background: none; color: var(--muted); cursor: pointer;

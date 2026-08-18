@@ -121,6 +121,51 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .gate-foot { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line-soft); font-size: 11px; color: var(--faint); text-align: center; }
 .gate-foot.warn { color: var(--sev-1); }
 
+/* sign in / create account */
+.gate-tabs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+  padding: 2px; margin-bottom: 4px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-0);
+}
+.gate-tabs button {
+  height: 28px; border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--muted);
+  font: inherit; font-size: 12px; cursor: pointer;
+}
+.gate-tabs button:hover { color: var(--text); }
+.gate-tabs button.on { background: var(--bg-2); color: var(--text); }
+
+.gate-field { margin-top: 2px; }
+.gate-field[hidden] { display: none; }
+.gate-note { min-height: 15px; margin-top: 5px; font-size: 11px; color: var(--faint); }
+.gate-note.good { color: var(--sev-3); }
+.gate-note.bad  { color: var(--sev-2); }
+
+/* codes are read off a screen and typed by hand — keep them wide and even */
+.gate-code { font-family: var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
+
+.gate-meter-row { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+.gate-meter {
+  flex: 1; height: 3px; border-radius: 99px; background: var(--bg-3); overflow: hidden;
+}
+.gate-meter i {
+  display: block; height: 100%; width: 0; border-radius: 99px;
+  background: var(--faint); transition: width .18s ease, background .18s ease;
+}
+.gate-meter[data-score="1"] i { width: 25%; background: var(--sev-2); }
+.gate-meter[data-score="2"] i { width: 50%; background: var(--sev-1); }
+.gate-meter[data-score="3"] i { width: 75%; background: var(--sev-3); }
+.gate-meter[data-score="4"] i { width: 100%; background: var(--sev-3); }
+.gate-meter-word { font-size: 10.5px; color: var(--faint); min-width: 92px; text-align: right; }
+
+.gate-hint { margin: 12px 0 0; font-size: 11px; line-height: 1.5; color: var(--faint); }
+.gate-link {
+  display: block; width: 100%; margin-top: 10px; padding: 6px 0;
+  border: 0; background: none; color: var(--muted);
+  font: inherit; font-size: 11.5px; cursor: pointer; text-align: center;
+}
+.gate-link:hover { color: var(--text); text-decoration: underline; }
+
 /* ---------------- app shell ---------------- */
 
 #app {
