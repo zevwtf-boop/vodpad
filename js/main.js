@@ -1,21 +1,21 @@
 /* boot: wake the server, load settings, paint the first surface. */
 
-import { $, h } from './util.js?v=66fb115653';
-import { icon } from './icons.js?v=66fb115653';
-import { api, chooseBackend, isStatic, mode } from './api.js?v=66fb115653';
-import { state, bus, boot as loadState, saveNow } from './store.js?v=66fb115653';
-import { initTooltips, toast } from './ui.js?v=66fb115653';
-import { go, paintChrome, back, toggleMap } from './nav.js?v=66fb115653';
-import { applySettings, openGear } from './settings.js?v=66fb115653';
-import { installKeys } from './keys.js?v=66fb115653';
-import { installContextMenus } from './menus.js?v=66fb115653';
-import { openPalette } from './search.js?v=66fb115653';
-import { openReader } from './readmode.js?v=66fb115653';
-import { toggleVideo } from './video.js?v=66fb115653';
+import { $, h } from './util.js?v=5aab9d9b3f';
+import { icon } from './icons.js?v=5aab9d9b3f';
+import { api, chooseBackend, isStatic, mode } from './api.js?v=5aab9d9b3f';
+import { state, bus, boot as loadState, saveNow } from './store.js?v=5aab9d9b3f';
+import { initTooltips, toast } from './ui.js?v=5aab9d9b3f';
+import { go, paintChrome, back, toggleMap } from './nav.js?v=5aab9d9b3f';
+import { applySettings, openGear } from './settings.js?v=5aab9d9b3f';
+import { installKeys } from './keys.js?v=5aab9d9b3f';
+import { installContextMenus } from './menus.js?v=5aab9d9b3f';
+import { openPalette } from './search.js?v=5aab9d9b3f';
+import { openReader } from './readmode.js?v=5aab9d9b3f';
+import { toggleVideo } from './video.js?v=5aab9d9b3f';
 
-import './dashboard.js?v=66fb115653';
-import './canvas.js?v=66fb115653';
-import './page.js?v=66fb115653';
+import './dashboard.js?v=5aab9d9b3f';
+import './canvas.js?v=5aab9d9b3f';
+import './page.js?v=5aab9d9b3f';
 
 const bootMsg = (text) => { const el = $('#boot-msg'); if (el) el.textContent = text; };
 
@@ -37,12 +37,12 @@ async function start() {
     }
   } else {
     // hosted build: sign in first, either against the worker or the local vault
-    const { alreadySignedIn, whoAmI } = await import('./api.js?v=66fb115653');
+    const { alreadySignedIn, whoAmI } = await import('./api.js?v=5aab9d9b3f');
     let name = (await alreadySignedIn()) ? await whoAmI() : null;
     if (!name) {
       bootMsg(mode === 'cloud' ? 'sign in to load your sessions' : 'this copy is encrypted — sign in to open it');
       document.getElementById('boot').classList.add('gone-quiet');
-      const { requireLogin } = await import('./gate.js?v=66fb115653');
+      const { requireLogin } = await import('./gate.js?v=5aab9d9b3f');
       name = await requireLogin();
       document.getElementById('boot').classList.remove('gone-quiet');
     }

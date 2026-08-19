@@ -19,10 +19,20 @@ async function req(method, path, body, headers = {}) {
  *  all three backends need this to sweep up deleted screenshots. */
 export function mediaNamesOf(doc) {
   const names = new Set();
+  // a data: or http: src is a preset picture or a remote one — it is not a
+  // file in this board's media folder, and adding it here would put a whole
+  // svg in the keep-list and have the blob cache try to fetch it
+  const keep = (src) => {
+    if (!src || /^(data:|https?:|blob:)/.test(src)) return;
+    names.add(String(src).replace(/^media\//, ''));
+  };
   for (const card of Object.values(doc?.cards || {})) {
     for (const block of card.blocks || []) {
-      if (block.type === 'image' && block.src) names.add(String(block.src).replace(/^media\//, ''));
+      if (block.type === 'image') keep(block.src);
     }
+    // pictures dropped into a box on the whiteboard are media too — leaving
+    // them out here would have the next gc delete the file under them
+    for (const shape of card.shapes || []) keep(shape.src);
   }
   return [...names];
 }
@@ -74,7 +84,7 @@ export async function chooseBackend() {
   let config = null;
   try { config = await (await fetch('config.json', { cache: 'no-store' })).json(); } catch { /* optional */ }
   if (config && config.api) {
-    const cloud = await import('./cloud.js?v=66fb115653');
+    const cloud = await import('./cloud.js?v=5aab9d9b3f');
     cloud.configure(config.api);
     api = cloud.cloudApi;
     registerStaticMedia(cloud.cloudMediaUrl);
@@ -83,7 +93,7 @@ export async function chooseBackend() {
   }
 
   // 3. otherwise everything stays in this browser, encrypted
-  const vault = await import('./vault.js?v=66fb115653');
+  const vault = await import('./vault.js?v=5aab9d9b3f');
   api = vault.localApi;
   registerStaticMedia(vault.localMediaUrl);
   mode = 'vault';
@@ -94,29 +104,29 @@ export async function chooseBackend() {
 
 export async function alreadySignedIn() {
   if (mode !== 'cloud') return false;
-  const cloud = await import('./cloud.js?v=66fb115653');
+  const cloud = await import('./cloud.js?v=5aab9d9b3f');
   return cloud.resume();
 }
 
 export async function signIn(name, password) {
   if (mode === 'cloud') {
-    const cloud = await import('./cloud.js?v=66fb115653');
+    const cloud = await import('./cloud.js?v=5aab9d9b3f');
     await cloud.login(name, password);
     return cloud.cloudUser();
   }
-  const vault = await import('./vault.js?v=66fb115653');
+  const vault = await import('./vault.js?v=5aab9d9b3f');
   return (await vault.unlock(name, password)) ? vault.currentUser() : null;
 }
 
 export async function signOut() {
-  if (mode === 'cloud') (await import('./cloud.js?v=66fb115653')).logout();
-  else (await import('./vault.js?v=66fb115653')).lock();
+  if (mode === 'cloud') (await import('./cloud.js?v=5aab9d9b3f')).logout();
+  else (await import('./vault.js?v=5aab9d9b3f')).lock();
   location.reload();
 }
 
 export async function whoAmI() {
-  if (mode === 'cloud') return (await import('./cloud.js?v=66fb115653')).cloudUser();
-  if (mode === 'vault') return (await import('./vault.js?v=66fb115653')).currentUser();
+  if (mode === 'cloud') return (await import('./cloud.js?v=5aab9d9b3f')).cloudUser();
+  if (mode === 'vault') return (await import('./vault.js?v=5aab9d9b3f')).currentUser();
   return null;
 }
 
@@ -135,23 +145,23 @@ export const canSignUp = () => mode === 'cloud';
 /** live "is that name free / is that code good", for the signup form */
 export async function checkSignup(name, code) {
   if (mode !== 'cloud') return { name: { ok: false, why: '' }, code: { ok: false, why: '' } };
-  return (await import('./cloud.js?v=66fb115653')).checkSignup(name, code);
+  return (await import('./cloud.js?v=5aab9d9b3f')).checkSignup(name, code);
 }
 
 export async function signUp(name, code, password) {
   if (mode !== 'cloud') throw new Error('this copy cannot make accounts');
-  return (await import('./cloud.js?v=66fb115653')).signup(name, code, password);
+  return (await import('./cloud.js?v=5aab9d9b3f')).signup(name, code, password);
 }
 
 export async function resetPassword(code, password) {
   if (mode !== 'cloud') throw new Error('this copy cannot reset passwords');
-  return (await import('./cloud.js?v=66fb115653')).resetPassword(code, password);
+  return (await import('./cloud.js?v=5aab9d9b3f')).resetPassword(code, password);
 }
 
 /** the admin-only calls, or null when this build has no notion of accounts */
 export async function adminApi() {
   if (mode !== 'cloud') return null;
-  return (await import('./cloud.js?v=66fb115653')).adminApi;
+  return (await import('./cloud.js?v=5aab9d9b3f')).adminApi;
 }
 
 /** media path stored in a board ("media/ab12.png") -> a url the browser can load.

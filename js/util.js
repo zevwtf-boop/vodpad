@@ -37,7 +37,15 @@ export function h(spec, props = null, ...kids) {
     else if (k === 'text') el.textContent = v;
     else if (k === 'html') el.innerHTML = v;
     else if (k === 'tip') el.dataset.tip = v;
-    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    // custom properties have to go through setProperty — Object.assign drops
+    // any key starting with "--" without a word of complaint
+    else if (k === 'style' && typeof v === 'object') {
+      for (const [sk, sv] of Object.entries(v)) {
+        if (sv === null || sv === undefined) continue;
+        if (sk.startsWith('--')) el.style.setProperty(sk, String(sv));
+        else el.style[sk] = sv;
+      }
+    }
     else if (k === 'data') for (const [dk, dv] of Object.entries(v)) el.dataset[dk] = dv;
     else if (k === 'on') for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
     else if (k in el && k !== 'list' && typeof v !== 'object') el[k] = v;

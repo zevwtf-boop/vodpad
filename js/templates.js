@@ -10,10 +10,10 @@
    there too or it would vanish on save. cloud and vault store settings as
    free-form json. */
 
-import { h, uid, clear } from './util.js?v=66fb115653';
-import { icon } from './icons.js?v=66fb115653';
-import { state, setSetting } from './store.js?v=66fb115653';
-import { openModal, toast, confirmDialog, promptDialog, contextMenu } from './ui.js?v=66fb115653';
+import { h, uid, clear } from './util.js?v=5aab9d9b3f';
+import { icon } from './icons.js?v=5aab9d9b3f';
+import { state, setSetting } from './store.js?v=5aab9d9b3f';
+import { openModal, toast, confirmDialog, promptDialog, contextMenu } from './ui.js?v=5aab9d9b3f';
 
 const p = (html) => ({ type: 'p', html });
 const h2 = (html) => ({ type: 'h2', html });
@@ -23,8 +23,18 @@ export const BUILT_IN = [
   {
     id: 'blank',
     name: 'blank',
-    note: 'an empty page, the way it has always been',
+    note: 'nothing at all — an empty plane, no paper, no title',
     blocks: [],
+    // blank means blank. the paper, the title and the meta row are furniture,
+    // and a session that starts as a whiteboard should not have to have them
+    // turned off by hand every time.
+    chrome: { paper: false, title: false, meta: false, kids: false },
+  },
+  {
+    id: 'paper',
+    name: 'a page to write on',
+    note: 'the paper, a title and one empty line',
+    blocks: [p('')],
   },
   {
     id: 'vod',
@@ -63,19 +73,51 @@ export const BUILT_IN = [
   },
 ];
 
-/** built-ins first, then anything saved off a page */
-export const allTemplates = () => [...BUILT_IN, ...(state.settings.templates || [])];
+/** built-ins first, then anything saved off a page. a built-in you deleted is
+ *  remembered by id, so it can be put back without hunting for it. */
+export const allTemplates = () => {
+  const gone = new Set(state.settings.hiddenTemplates || []);
+  return [...BUILT_IN.filter((t) => !gone.has(t.id)), ...(state.settings.templates || [])];
+};
 
-export const templateById = (id) => allTemplates().find((t) => t.id === id) || BUILT_IN[0];
+export const hiddenTemplateCount = () => (state.settings.hiddenTemplates || []).length;
+export function restoreTemplates() {
+  setSetting('hiddenTemplates', []);
+  toast('the built-in templates are back', { kind: 'ok' });
+}
 
-/** stamp a template's blocks onto a freshly created session document */
+export const templateById = (id) => allTemplates().find((t) => t.id === id) || allTemplates()[0] || BUILT_IN[0];
+
+/** stamp a template onto a freshly created session document.
+ *  a template with no blocks empties the page rather than being ignored —
+ *  that is what "blank" means. */
 export function applyTemplate(doc, tpl) {
-  if (!tpl || !tpl.blocks?.length) return doc;
+  if (!tpl) return doc;
   const root = doc.cards?.[doc.rootId];
   if (!root) return doc;
-  root.blocks = tpl.blocks.map((b) => ({ ...b, id: uid('b'), html: b.html ?? '' }));
-  // always leave somewhere to start typing
-  root.blocks.push({ id: uid('b'), type: 'p', html: '' });
+  root.blocks = (tpl.blocks || []).map((b) => ({ ...b, id: uid('b'), html: b.html ?? '' }));
+  // a template you wrote wants somewhere to carry on typing; an empty one does not
+  if (root.blocks.length) root.blocks.push({ id: uid('b'), type: 'p', html: '' });
+  if (tpl.chrome) root.chrome = { ...tpl.chrome };
+
+  // a template can carry a board as well as a page. ids are minted fresh and
+  // the lines between the boxes are re-pointed at the new ones, or the second
+  // session made from the template would join boxes in the first.
+  if (tpl.shapes?.length) {
+    const remap = new Map();
+    root.shapes = tpl.shapes.map((sh) => {
+      const id = uid('sh');
+      remap.set(sh.id, id);
+      return { ...sh, id };
+    });
+    root.wires = (tpl.wires || [])
+      .filter((w) => remap.has(w.from?.id) && remap.has(w.to?.id))
+      .map((w) => ({
+        ...w, id: uid('w'),
+        from: { ...w.from, id: remap.get(w.from.id) },
+        to: { ...w.to, id: remap.get(w.to.id) },
+      }));
+  }
   return doc;
 }
 
@@ -102,17 +144,21 @@ export async function askForNewSession() {
         h('span.tpl-tick', tpl.id === picked ? icon('check', { size: 13 }) : null),
         h('span.tpl-meat',
           h('span.tpl-name', { text: tpl.name }),
-          h('span.tpl-note', { text: tpl.note || `${tpl.blocks.length} lines` })),
+          h('span.tpl-note', { text: tpl.note || `${(tpl.blocks || []).length} lines` })),
         BUILT_IN.some((b) => b.id === tpl.id) ? null : h('span.tpl-mine', { text: 'yours' }));
       row.addEventListener('contextmenu', (e) => {
-        if (BUILT_IN.some((b) => b.id === tpl.id)) return;
         e.preventDefault();
+        const built = BUILT_IN.some((b) => b.id === tpl.id);
         contextMenu([
           { header: tpl.name },
-          { label: 'rename', icon: 'pen', onPick: async () => { await renameTemplate(tpl); paint(); } },
-          { label: 'delete this template', icon: 'trash', danger: true,
-            onPick: async () => { await deleteTemplate(tpl); picked = 'blank'; paint(); } },
-        ], { x: e.clientX, y: e.clientY });
+          { label: 'rename', icon: 'pen', disabled: built, hint: built ? 'built in' : '',
+            onPick: async () => { await renameTemplate(tpl); paint(); } },
+          { label: built ? 'take it off the list' : 'delete this template', icon: 'trash', danger: true,
+            onPick: async () => { await deleteTemplate(tpl); picked = allTemplates()[0]?.id || 'blank'; paint(); } },
+          hiddenTemplateCount() ? { sep: true } : null,
+          hiddenTemplateCount() ? { label: `put back ${hiddenTemplateCount()} built-in`, icon: 'undo',
+            onPick: () => { restoreTemplates(); paint(); } } : null,
+        ].filter(Boolean), { x: e.clientX, y: e.clientY, width: 220 });
       });
       choices.append(row);
     }
@@ -148,7 +194,19 @@ export async function saveAsTemplate(c) {
       ...(b.indent ? { indent: b.indent } : {}),
     }));
 
-  if (!blocks.length) {
+  // the board comes too. an uploaded picture belongs to this session's media
+  // folder and would be a dead link in the next one, so a box keeps everything
+  // except that — the built-in preset pictures are data: urls and travel fine.
+  const shapes = (c.shapes || []).map((sh) => {
+    const copy = { ...sh };
+    delete copy.pending;
+    if (copy.src && !/^data:/.test(copy.src)) { delete copy.src; delete copy.nat; }
+    return copy;
+  });
+  const live = new Set(shapes.map((sh) => sh.id));
+  const wires = (c.wires || []).filter((w) => live.has(w.from?.id) && live.has(w.to?.id));
+
+  if (!blocks.length && !shapes.length) {
     toast('there is nothing on this page to save', { kind: 'warn' });
     return;
   }
@@ -169,11 +227,16 @@ export async function saveAsTemplate(c) {
     okLabel: 'replace it',
   }))) return;
 
+  const bits = [];
+  if (blocks.length) bits.push(`${blocks.length} line${blocks.length === 1 ? '' : 's'}`);
+  if (shapes.length) bits.push(`${shapes.length} box${shapes.length === 1 ? '' : 'es'}`);
   const tpl = {
     id: existing?.id || uid('tpl'),
     name,
-    note: `${blocks.length} lines · from "${(c.title || 'a page').trim()}"`,
+    note: `${bits.join(' · ')} · from "${(c.title || 'a page').trim()}"`,
     blocks,
+    ...(shapes.length ? { shapes, wires } : {}),
+    chrome: { ...(c.chrome || {}) },
   };
   const next = existing ? mine.map((t) => (t.id === tpl.id ? tpl : t)) : [...mine, tpl];
   setSetting('templates', next);
@@ -187,6 +250,11 @@ async function renameTemplate(tpl) {
 }
 
 async function deleteTemplate(tpl) {
+  if (BUILT_IN.some((b) => b.id === tpl.id)) {
+    setSetting('hiddenTemplates', [...new Set([...(state.settings.hiddenTemplates || []), tpl.id])]);
+    toast(`"${tpl.name}" is off the list — right-click any template to put it back`, { ms: 4000 });
+    return;
+  }
   const ok = await confirmDialog({
     title: `delete "${tpl.name}"?`,
     body: 'sessions you already made from it are untouched — this only removes it from the list.',

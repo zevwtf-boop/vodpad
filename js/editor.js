@@ -5,13 +5,13 @@
    editable, and it is what notion/craft do too.
 */
 
-import { h, $, $$, uid, clamp, stripHtml, sanitizeInline, modKey, debounce } from './util.js?v=66fb115653';
-import { icon } from './icons.js?v=66fb115653';
-import { state, card, commit, quietly, syncTags, bus, undo } from './store.js?v=66fb115653';
-import { contextMenu, toast } from './ui.js?v=66fb115653';
-import { animate, EASE } from './motion.js?v=66fb115653';
-import { renderImageBlock } from './images.js?v=66fb115653';
-import { openSlashMenu, closeSlashMenu, slashOpen } from './toolbar.js?v=66fb115653';
+import { h, $, $$, uid, clamp, stripHtml, sanitizeInline, modKey, debounce } from './util.js?v=5aab9d9b3f';
+import { icon } from './icons.js?v=5aab9d9b3f';
+import { state, card, commit, quietly, syncTags, bus, undo } from './store.js?v=5aab9d9b3f';
+import { contextMenu, toast } from './ui.js?v=5aab9d9b3f';
+import { animate, EASE } from './motion.js?v=5aab9d9b3f';
+import { renderImageBlock } from './images.js?v=5aab9d9b3f';
+import { openSlashMenu, closeSlashMenu, slashOpen } from './toolbar.js?v=5aab9d9b3f';
 
 export const TEXT_TYPES = new Set(['p', 'h1', 'h2', 'h3', 'quote', 'callout', 'ul', 'ol', 'todo']);
 export const LIST_TYPES = new Set(['ul', 'ol', 'todo']);
@@ -28,7 +28,15 @@ export function renderBlocks(host, cardId) {
   host.dataset.card = cardId;
   const c = card(cardId);
   if (!c) return;
-  if (!c.blocks?.length) quietly((b) => { b.cards[cardId].blocks = [{ id: uid('b'), type: 'p', html: '' }]; });
+  // an empty page used to grow a paragraph back on every render, which is why
+  // "blank" never was. it stays empty now and offers a line instead.
+  if (!c.blocks?.length) {
+    host.append(h('button.page-empty-hint', {
+      on: { click: () => insertBlock(null, { type: 'p' }, true) },
+    }, 'click here to start writing — or double-click the plane for a box'));
+    bus.emit('page:outline');
+    return;
+  }
   for (const stale of document.querySelectorAll('#page-free > .blk')) stale.remove();
   const free = document.querySelector('#page-free');
   for (const block of card(cardId).blocks) {
@@ -151,7 +159,7 @@ function subPageEl(block) {
   return h('button.subpage-block', {
     on: {
       click: async (e) => {
-        const { openCardPage } = await import('./nav.js?v=66fb115653');
+        const { openCardPage } = await import('./nav.js?v=5aab9d9b3f');
         openCardPage(kid.id, e.currentTarget);
       },
     },
@@ -367,6 +375,7 @@ export function pageStats(cardId = ctx.cardId) {
   }
   for (const note of c.side || []) eat(note.html);
   for (const box of c.free || []) eat(box.html);
+  for (const shape of c.shapes || []) { eat(shape.html); if (shape.src) pictures++; }
   return { words, chars, blocks: (c.blocks || []).length, pictures, notes: (c.side || []).length, todo, done };
 }
 
@@ -395,16 +404,19 @@ export function insertBlock(afterId, patch = {}, focus = true) {
 
 /** blocks can be an end of a wire; dropping one has to tidy those up */
 async function tidyWires() {
-  try { (await import('./wires.js?v=66fb115653')).pruneWires(); } catch { /* no wires module, fine */ }
+  try { (await import('./wires.js?v=5aab9d9b3f')).pruneWires(); } catch { /* no wires module, fine */ }
 }
 
 export function deleteBlock(id, { focusPrev = true } = {}) {
   const list = blocksOf();
-  if (list.length <= 1) {
-    setType(id, 'p');
-    const body = bodyOf(id);
-    if (body) body.innerHTML = '';
-    commit('clear block', (b) => { const bl = b.cards[ctx.cardId].blocks[0]; bl.html = ''; bl.type = 'p'; });
+  // the last line used to be undeletable — it was cleared and left behind. a
+  // page is allowed to have nothing on it, so it goes like any other, and
+  // clicking the paper starts a new first line.
+  if (list.length === 1 && list[0].id === id) {
+    const cardId = ctx.cardId;
+    commit('delete block', (b) => { b.cards[cardId].blocks = []; });
+    blockElById(id)?.remove();
+    tidyWires();
     return;
   }
   const at = blockIndex(id);
@@ -850,7 +862,7 @@ async function onPaste(e, body, blockId) {
   if (imageItem) {
     e.preventDefault();
     const file = imageItem.getAsFile();
-    const { insertImageFromFile } = await import('./images.js?v=66fb115653');
+    const { insertImageFromFile } = await import('./images.js?v=5aab9d9b3f');
     insertImageFromFile(file, blockId);
     return;
   }

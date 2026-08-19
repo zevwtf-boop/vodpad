@@ -1,11 +1,11 @@
 /* pictures: paste them in, put text beside them, pin notes onto them. */
 
-import { h, $, $$, uid, clamp, debounce } from './util.js?v=66fb115653';
-import { icon } from './icons.js?v=66fb115653';
-import { api, mediaUrl } from './api.js?v=66fb115653';
-import { state, card, commit, quietly, bus } from './store.js?v=66fb115653';
-import { toast, contextMenu, popover, closePopover, confirmDialog } from './ui.js?v=66fb115653';
-import { animate, EASE, ping } from './motion.js?v=66fb115653';
+import { h, $, $$, uid, clamp, debounce } from './util.js?v=5aab9d9b3f';
+import { icon } from './icons.js?v=5aab9d9b3f';
+import { api, mediaUrl } from './api.js?v=5aab9d9b3f';
+import { state, card, commit, quietly, bus } from './store.js?v=5aab9d9b3f';
+import { toast, contextMenu, popover, closePopover, confirmDialog } from './ui.js?v=5aab9d9b3f';
+import { animate, EASE, ping } from './motion.js?v=5aab9d9b3f';
 
 const LAYOUTS = [
   ['left', 'text on the right', 'alignLeft'],
@@ -49,7 +49,7 @@ export function renderImageBlock(block, cardId) {
       h('span.tb-sep'),
       tool('pen', 'draw on it · or double-click the picture', () => openStudio(block.id)),
       tool('pin', 'drop a numbered pin', () => armPin(block.id)),
-      tool('link', 'link it to a line of text', async () => (await import('./anchors.js?v=66fb115653')).linkImageToLine(block.id)),
+      tool('link', 'link it to a line of text', async () => (await import('./anchors.js?v=5aab9d9b3f')).linkImageToLine(block.id)),
       tool('dots', 'everything else · or just right-click the picture', (e) => {
         e.currentTarget.closest('.img-block').dispatchEvent(new MouseEvent('contextmenu', {
           bubbles: true, clientX: e.clientX, clientY: e.clientY,
@@ -259,7 +259,7 @@ function openPin(blockId, pinId, anchor) {
     area,
     h('div.pin-pop-foot',
       h('button.btn.btn-sm.btn-ghost', {
-        on: { click: async () => { closePopover(); (await import('./anchors.js?v=66fb115653')).linkPinToLine(blockId, pinId); } },
+        on: { click: async () => { closePopover(); (await import('./anchors.js?v=5aab9d9b3f')).linkPinToLine(blockId, pinId); } },
       }, icon('link', { size: 13 }), 'link to a line'),
       h('button.btn.btn-sm.btn-ghost.btn-danger', {
         on: { click: () => { removePin(blockId, pinId); closePopover(); } },
@@ -411,14 +411,14 @@ function startResize(e, blockId, fig) {
 
 export function refreshImage(blockId) {
   const wasPicked = pickedImage === blockId;
-  import('./editor.js?v=66fb115653').then((ed) => {
+  import('./editor.js?v=5aab9d9b3f').then((ed) => {
     ed.refreshBlock(blockId);
     if (wasPicked) selectImage(blockId);
   });
 }
 
 async function openStudio(blockId) {
-  const { openAnnotator } = await import('./annotate.js?v=66fb115653');
+  const { openAnnotator } = await import('./annotate.js?v=5aab9d9b3f');
   openAnnotator(blockId);
 }
 
@@ -443,7 +443,7 @@ function measure(blobUrl) {
 export async function insertImageFromFile(file, afterBlockId) {
   if (!file) return;
   if (!file.type.startsWith('image/')) { toast('that is not a picture', { kind: 'warn' }); return; }
-  const ed = await import('./editor.js?v=66fb115653');
+  const ed = await import('./editor.js?v=5aab9d9b3f');
   const preview = URL.createObjectURL(file);
   const nat = await measure(preview);
 
@@ -492,7 +492,17 @@ document.addEventListener('paste', async (e) => {
   const item = Array.from(e.clipboardData?.items || []).find((i) => i.type.startsWith('image/'));
   if (!item) return;
   e.preventDefault();
-  const ed = await import('./editor.js?v=66fb115653');
+
+  // a box is selected: the screenshot belongs in the box, not at the end of
+  // the column you were last typing in
+  const shapes = await import('./shapes.js?v=5aab9d9b3f');
+  const picked = shapes.selectedIds();
+  if (picked.length === 1 && !document.activeElement?.isContentEditable) {
+    shapes.putImageInShape(picked[0], item.getAsFile());
+    return;
+  }
+
+  const ed = await import('./editor.js?v=5aab9d9b3f');
   insertImageFromFile(item.getAsFile(), ed.currentBlockId());
 });
 
@@ -511,8 +521,25 @@ document.addEventListener('drop', async (e) => {
   const files = Array.from(e.dataTransfer?.files || []).filter((f) => f.type.startsWith('image/'));
   if (!files.length) return;
   e.preventDefault();
-  const ed = await import('./editor.js?v=66fb115653');
-  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.blk');
+
+  // dropped on the open plane rather than on the paper: each picture becomes
+  // its own box, sized to the picture. (a drop straight onto a box is caught
+  // by that box and never reaches here.)
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  if (under && !under.closest('.page-sheet') && under.closest('.page-viewport')) {
+    const { imageShapeAt } = await import('./shapes.js?v=5aab9d9b3f');
+    const { toPlane } = await import('./page.js?v=5aab9d9b3f');
+    const at = toPlane(e.clientX, e.clientY);
+    let i = 0;
+    for (const file of files) {
+      await imageShapeAt({ x: at.x + i * 34, y: at.y + i * 34 }, file);
+      i++;
+    }
+    return;
+  }
+
+  const ed = await import('./editor.js?v=5aab9d9b3f');
+  const target = under?.closest('.blk');
   let anchor = target?.dataset.id || ed.currentBlockId();
   for (const file of files) {
     const made = await insertImageFromFile(file, anchor);

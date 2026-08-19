@@ -12,7 +12,7 @@
    installed something on your machine.
 */
 
-import { mediaNamesOf } from './api.js?v=66fb115653';
+import { mediaNamesOf } from './api.js?v=5aab9d9b3f';
 
 const DB_NAME = 'vodpad-web';
 const STORE = 'kv';
@@ -213,6 +213,12 @@ function boardMeta(id, doc) {
       if (block.type === 'image') { shots++; if (!thumb && block.src) thumb = block.src; }
       else if ((block.html || '').trim()) notes++;
     }
+    // a session made entirely on the whiteboard still has notes and pictures
+    for (const shape of c.shapes || []) {
+      const real = shape.src && !/^(data:|https?:)/.test(shape.src);
+      if (real) { shots++; if (!thumb) thumb = shape.src; }
+      else if ((shape.html || '').trim()) notes++;
+    }
   }
   return {
     id, title: doc.title || id,
@@ -235,7 +241,7 @@ function blankBoard(id, title) {
       'c-root': {
         id: 'c-root', parent: null, x: 0, y: 0, w: 520, h: 340,
         title, tags: [], severity: 0, t: null, created: stamp, updated: stamp,
-        blocks: [{ id: `b-${stamp}`, type: 'p', html: '' }], free: [], children: [],
+        blocks: [], free: [], children: [],
       },
     },
   };
@@ -375,7 +381,7 @@ export const localApi = {
   videos: async () => ({ roots: [], files: [], local: true }),
   // same as cloud: nothing local to cache into, so the api url goes straight
   // into the <img> and the browser cache does the work
-  lootmap: async () => (await import('./api.js?v=66fb115653')).fetchIslandDirect(),
+  lootmap: async () => (await import('./api.js?v=5aab9d9b3f')).fetchIslandDirect(),
   reveal: async () => ({ ok: false }),
   quit: async () => ({ ok: false }),
 
@@ -437,7 +443,7 @@ export function localMediaUrl(boardId, src) {
 }
 
 // hand the resolver to api.js so mediaUrl() stays synchronous everywhere else
-import('./api.js?v=66fb115653').then((m) => m.registerStaticMedia(localMediaUrl));
+import('./api.js?v=5aab9d9b3f').then((m) => m.registerStaticMedia(localMediaUrl));
 
 /* ---------------------------------------------------------------- backups
 

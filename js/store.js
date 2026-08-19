@@ -1,8 +1,8 @@
 /* the single source of truth: state, mutations, undo, autosave.
    nothing renders from here — surfaces subscribe to the bus and redraw. */
 
-import { api, isStatic, mode, mediaNamesOf } from './api.js?v=66fb115653';
-import { emitter, uid, debounce, stripHtml } from './util.js?v=66fb115653';
+import { api, isStatic, mode, mediaNamesOf } from './api.js?v=5aab9d9b3f';
+import { emitter, uid, debounce, stripHtml } from './util.js?v=5aab9d9b3f';
 
 export const bus = emitter();
 
@@ -408,14 +408,30 @@ export const filterActive = () => state.filter.tags.size > 0 || state.filter.sev
 
 /* ---------------------------------------------------------------- settings */
 
-export const saveSettings = debounce(async (patch) => {
-  Object.assign(state.settings, patch);
+/* changes pile up in `pending` between flushes rather than being passed to the
+   debounce. the debounce only ever keeps its LAST argument, so flipping two
+   switches inside 180ms used to save the second and quietly drop the first —
+   which is exactly what a panel full of toggles does, and what the theme
+   picker was already doing when it set the theme and then cleared the accent. */
+let pending = {};
+
+const flushSettings = debounce(async () => {
+  const patch = pending;
+  pending = {};
+  if (!Object.keys(patch).length) return;
   try { await api.saveSettings(patch); } catch (e) { console.warn('settings save failed', e); }
   bus.emit('settings', state.settings);
 }, 180);
 
+export function saveSettings(patch) {
+  Object.assign(state.settings, patch);
+  Object.assign(pending, patch);
+  flushSettings();
+}
+
 export function setSetting(key, value) {
   state.settings[key] = value;
+  pending[key] = value;
   bus.emit('settings', state.settings);
-  saveSettings({ [key]: value });
+  flushSettings();
 }

@@ -1,0 +1,298 @@
+/* the whiteboard: boxes on the plane, their handles, and the chrome around a
+   selection. structure comes from hairlines and one shadow scale — the fills
+   are the only colour, because they are the thing carrying meaning here. */
+
+/* ---------------- the layer ---------------- */
+
+.page-shapes {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  overflow: visible; pointer-events: none;
+  z-index: 8;                       /* over the wires, so lines tuck behind boxes */
+  --iz: 1;                          /* 1 / zoom — keeps handles the same size on screen */
+}
+
+.shape-guides {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  overflow: visible; pointer-events: none; z-index: 900;
+}
+.shape-guide {
+  stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 3; opacity: .9;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------------- a box ---------------- */
+
+.shape {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: auto;
+  display: flex;
+  background: var(--fill);
+  border: var(--weight, 1.5px) solid var(--edge);
+  border-radius: 3px;
+  color: var(--ink);
+  cursor: default;
+  transition: box-shadow var(--d1), border-color var(--d1);
+}
+.shape[data-kind="round"] { border-radius: var(--radius); }
+.shape[data-kind="pill"] { border-radius: 999px; }
+.shape[data-kind="ellipse"] { border-radius: 50%; }
+.shape[data-kind="sticky"] {
+  border: 0; border-radius: 4px;
+  box-shadow: 0 10px 24px -12px rgb(var(--shade) / .8), 0 1px 0 rgb(255 255 255 / .28) inset;
+}
+.shape[data-kind="diamond"], .shape[data-kind="hex"],
+.shape[data-kind="triangle"], .shape[data-kind="cyl"] {
+  background: none; border-color: transparent;
+}
+.shape[data-kind="frame"] {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg-1) 45%, transparent);
+}
+
+/* a text box is a box with the box turned off */
+.shape.plain { border-color: transparent; background: none; box-shadow: none; }
+
+.shape-art { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.shape-body {
+  position: relative;
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  padding: 9px 12px;
+  outline: none;
+  overflow: hidden;
+  font-size: calc(var(--text-size) * .88);
+  line-height: 1.42;
+  letter-spacing: var(--track-body);
+  color: inherit;
+  word-break: break-word;
+}
+.shape-body:empty::before {
+  content: attr(data-ph);
+  opacity: .45;
+  font-size: 12px;
+  align-self: center; margin: auto;
+}
+.shape[data-kind="sticky"] .shape-body { font-weight: 500; }
+.shape.editing { cursor: text; }
+.shape.editing .shape-body { cursor: text; user-select: text; }
+
+/* the picture fills the box; anything written on it gets a plate to sit on */
+.shape-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border-radius: inherit;
+  pointer-events: none;
+  user-select: none;
+}
+.shape.has-pic .shape-body { justify-content: flex-end; }
+.shape.has-pic .shape-body:not(:empty) {
+  align-self: stretch;
+  flex: none;
+  margin-top: auto;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-0) 74%, transparent);
+  color: var(--text);
+}
+.shape.has-pic .shape-body:empty::before { content: none; }
+
+.shape-frame-title {
+  position: absolute; left: 10px; top: -26px;
+  padding: 2px 8px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--bg-1);
+  color: var(--muted);
+  font-size: 11.5px;
+  outline: none;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+.shape-chip {
+  position: absolute; right: 4px; top: 4px;
+  width: 20px; height: 20px;
+  display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--bg-1); color: var(--muted);
+  cursor: pointer;
+  transform: scale(var(--iz)); transform-origin: right top;
+}
+.shape-chip:hover { color: var(--accent); }
+.shape-lockmark {
+  position: absolute; left: 4px; top: 4px;
+  color: var(--faint); opacity: .8; pointer-events: none;
+  transform: scale(var(--iz)); transform-origin: left top;
+}
+
+/* ---------------- states ---------------- */
+
+.shape.sel { box-shadow: 0 0 0 calc(2px * var(--iz)) var(--accent); }
+.shape.moving { box-shadow: var(--shadow-3); z-index: 950 !important; }
+.shape.locked { cursor: not-allowed; }
+.shape.drop-on, .shape.wire-target { box-shadow: 0 0 0 calc(2px * var(--iz)) var(--accent); }
+.blk.wire-target, .freebox.wire-target, .sidenote.wire-target {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+
+/* ---------------- handles and ports ---------------- */
+
+.shape-chrome { position: absolute; inset: 0; pointer-events: none; }
+
+.shape-handle {
+  position: absolute;
+  width: calc(9px * var(--iz)); height: calc(9px * var(--iz));
+  margin: calc(-4.5px * var(--iz)) 0 0 calc(-4.5px * var(--iz));
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  background: var(--bg-0);
+  pointer-events: auto;
+}
+
+.shape-port {
+  position: absolute;
+  width: calc(11px * var(--iz)); height: calc(11px * var(--iz));
+  margin: calc(-5.5px * var(--iz)) 0 0 calc(-5.5px * var(--iz));
+  border: calc(2px * var(--iz)) solid var(--accent);
+  border-radius: 99px;
+  background: var(--bg-0);
+  cursor: crosshair;
+  pointer-events: auto;
+}
+.shape-port:hover { background: var(--accent); }
+
+/* ---------------- the strip over a multiple selection ---------------- */
+
+.shape-groupbar {
+  position: absolute;
+  z-index: 999;
+  display: flex; align-items: center; gap: 2px;
+  padding: 4px 6px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg-1);
+  box-shadow: var(--shadow-3);
+  pointer-events: auto;
+  transform: translateY(-100%) translateY(-10px) scale(var(--iz));
+  transform-origin: left bottom;
+  white-space: nowrap;
+}
+.gb-count { font-size: 11.5px; color: var(--muted); padding: 0 6px 0 2px; }
+.gb-sep { width: 1px; height: 16px; background: var(--line-soft); margin: 0 3px; }
+.gb-btn {
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--muted); cursor: pointer;
+}
+.gb-btn:hover { background: var(--bg-3); color: var(--text); }
+
+/* ---------------- drawing one out, and the marquee ---------------- */
+
+.shape-ghost, .shape-marquee {
+  position: absolute;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  pointer-events: none;
+  z-index: 998;
+}
+
+/* ---------------- tool rail additions ---------------- */
+
+.wb-rail { max-height: calc(100% - 24px); overflow-y: auto; scrollbar-width: none; }
+.wb-rail::-webkit-scrollbar { display: none; }
+
+.wb-options { max-width: 210px; }
+.wb-label {
+  font-size: var(--t--2); text-transform: uppercase; letter-spacing: .08em;
+  color: var(--faint);
+}
+.wb-hint { font-size: 11px; line-height: 1.4; color: var(--faint); max-width: 178px; }
+.wb-kinds { display: flex; flex-wrap: wrap; gap: 5px; max-width: 178px; }
+.wb-swatches.wb-wrap { flex-wrap: wrap; max-width: 178px; }
+
+.page-viewport[data-tool="box"], .page-viewport[data-tool="frame"] { cursor: crosshair; }
+
+body.wiring .shape { cursor: crosshair; }
+body.wiring .shape:hover { box-shadow: 0 0 0 2px var(--accent); }
+
+/* ---------------- the board's row in the outline ---------------- */
+
+.side-cap-sub { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.side-swatch {
+  flex: none; width: 10px; height: 10px;
+  border: 1px solid var(--line); border-radius: 3px;
+}
+.side-row[data-shape] .side-text { color: inherit; }
+
+/* ---------------- the images tab ---------------- */
+
+.side-group-cap {
+  padding: 10px 8px 5px;
+  font-size: var(--t--2); text-transform: uppercase; letter-spacing: .08em;
+  color: var(--faint);
+}
+.side-presets {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+  padding: 0 4px;
+}
+.side-preset {
+  display: grid; gap: 3px; justify-items: center; align-content: center;
+  padding: 7px 3px 5px;
+  min-height: 62px;
+  border: 1px solid var(--line-soft); border-radius: var(--radius-sm);
+  background: var(--bg-2); color: var(--muted);
+  cursor: pointer;
+  transition: background var(--d1), border-color var(--d1), color var(--d1);
+}
+.side-preset:hover { background: var(--bg-3); border-color: var(--line); color: var(--text); }
+.side-preset img { width: 28px; height: 28px; object-fit: contain; }
+.side-preset-map {
+  width: 28px; height: 28px; display: grid; place-items: center;
+  border: 1px dashed var(--line); border-radius: 99px; color: var(--accent);
+}
+.side-preset-name {
+  font-size: 9.5px; line-height: 1.2; text-align: center;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---------------- a page with its paper taken away ---------------- */
+
+.paper-chip {
+  position: absolute; z-index: 40;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  border: 1px dashed var(--line); border-radius: var(--radius);
+  background: var(--bg-1); color: var(--muted);
+  font-size: 11.5px; cursor: pointer;
+}
+.paper-chip:hover { color: var(--text); border-color: var(--accent); }
+
+.page-empty-hint {
+  display: block; width: 100%;
+  padding: 14px 0;
+  border: 0; background: none;
+  color: var(--faint); font-size: 13px; text-align: left;
+  cursor: text;
+}
+.page-empty-hint:hover { color: var(--muted); }
+
+/* ---------------- furniture you turned off ---------------- */
+
+body.no-rail .wb-rail, body.no-rail .wb-options { display: none; }
+body.no-zoom .wb-zoom { display: none; }
+body.no-status .page-status { display: none; }
+
+/* the plane's own background is a setting now */
+.page-viewport { background-size: var(--grid-size, 28px) var(--grid-size, 28px); }
+body[data-grid="none"] .page-viewport { background-image: none; }
+body[data-grid="lines"] .page-viewport {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--line) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--line) 45%, transparent) 1px, transparent 1px);
+}
+
+.gear-restore { display: flex; flex-wrap: wrap; gap: 8px; }
+.gear-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--faint); }

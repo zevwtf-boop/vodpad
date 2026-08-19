@@ -11,10 +11,10 @@
    single ctrl+z. "back to a column" is the way out of any of them.
 */
 
-import { h, clear } from './util.js?v=66fb115653';
-import { icon } from './icons.js?v=66fb115653';
-import { state, card, commit } from './store.js?v=66fb115653';
-import { openModal, toast } from './ui.js?v=66fb115653';
+import { h, clear } from './util.js?v=5aab9d9b3f';
+import { icon } from './icons.js?v=5aab9d9b3f';
+import { state, card, commit } from './store.js?v=5aab9d9b3f';
+import { openModal, toast } from './ui.js?v=5aab9d9b3f';
 
 const GAP = 26;
 const COL_W = 380;
@@ -137,7 +137,7 @@ export async function applyLayout(id) {
     if (target) layout.apply(target);
   });
 
-  const pg = await import('./page.js?v=66fb115653');
+  const pg = await import('./page.js?v=5aab9d9b3f');
   pg.refreshPage();
   toast(layout.id === 'column'
     ? 'back in one column · ctrl+z to undo'

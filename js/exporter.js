@@ -1,11 +1,12 @@
 /* turning a page (and everything nested under it) into a clean document —
    used by read mode, by markdown/html export, and by print-to-pdf. */
 
-import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=66fb115653';
-import { mediaUrl } from './api.js?v=66fb115653';
-import { state, card, childrenOf, cardTitle } from './store.js?v=66fb115653';
-import { paintStrokes } from './images.js?v=66fb115653';
-import { toast } from './ui.js?v=66fb115653';
+import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=5aab9d9b3f';
+import { mediaUrl } from './api.js?v=5aab9d9b3f';
+import { state, card, childrenOf, cardTitle } from './store.js?v=5aab9d9b3f';
+import { paintStrokes } from './images.js?v=5aab9d9b3f';
+import { pathFor, sidePoint, bestSides } from './wires.js?v=5aab9d9b3f';
+import { toast } from './ui.js?v=5aab9d9b3f';
 
 /* ---------------------------------------------------------------- dom render */
 
@@ -74,6 +75,9 @@ export function renderCardTree(cardId, { level = 1, max = 6 } = {}) {
 
   section.append(body);
 
+  const board = boardFor(c);
+  if (board) section.append(board);
+
   if ((c.free || []).length) {
     section.append(h('div.doc-loose',
       h('h6', { text: 'notes off to the side' }),
@@ -84,6 +88,115 @@ export function renderCardTree(cardId, { level = 1, max = 6 } = {}) {
     for (const kid of childrenOf(cardId)) section.append(renderCardTree(kid.id, { level: level + 1, max }));
   }
   return section;
+}
+
+/* ---------------------------------------------------------------- the board
+
+   the whiteboard has to survive leaving the app, or half a session's thinking
+   only exists inside vodpad. it is drawn to scale from the model — the boxes
+   where they sit and the lines between them — rather than screenshotted, so
+   the text in it is still text you can search and select. lines that run to
+   something in the column are left out: there is nowhere on this page for
+   them to land. */
+
+const SH_MIN = 40;
+
+function boardPaint(s) {
+  const fill = s.fill || '#68707c';
+  const tone = s.tone || 'solid';
+  if (s.kind === 'frame') return { bg: 'transparent', edge: '#2b1c4c', ink: '#9d90b8' };
+  if (tone === 'text') return { bg: 'transparent', edge: 'transparent', ink: '#ece6f7' };
+  if (tone === 'none') return { bg: 'transparent', edge: fill, ink: '#ece6f7' };
+  if (tone === 'soft') return { bg: `color-mix(in srgb, ${fill} 22%, #150d27)`, edge: fill, ink: '#ece6f7' };
+  return { bg: fill, edge: fill, ink: inkOn(fill) };
+}
+
+function inkOn(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#ece6f7';
+  const n = parseInt(m[1], 16);
+  const f = (v) => { const ch = v / 255; return ch <= 0.04045 ? ch / 12.92 : ((ch + 0.055) / 1.055) ** 2.4; };
+  const lum = 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+  return lum > 0.48 ? '#14181c' : '#f6f8fa';
+}
+
+const RADIUS = { round: '10px', pill: '999px', ellipse: '50%', sticky: '4px', frame: '10px' };
+
+function boardFor(c) {
+  const shapes = (c.shapes || []).filter((s) => s && s.w > 0 && s.h > 0);
+  if (!shapes.length) return null;
+
+  const pad = 30;
+  const l = Math.min(...shapes.map((s) => s.x)) - pad;
+  const t = Math.min(...shapes.map((s) => s.y)) - pad;
+  const r = Math.max(...shapes.map((s) => s.x + s.w)) + pad;
+  const b = Math.max(...shapes.map((s) => s.y + s.h)) + pad;
+  const w = Math.max(SH_MIN, r - l);
+  const hh = Math.max(SH_MIN, b - t);
+  const scale = Math.min(1, 860 / w);
+
+  const stage = h('div.doc-board-inner', {
+    style: { width: `${w}px`, height: `${hh}px`, transform: `scale(${scale})` },
+  });
+
+  // the lines first, so boxes sit on top of them exactly as they do in the app
+  const byId = new Map(shapes.map((s) => [s.id, s]));
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'doc-board-lines');
+  svg.setAttribute('viewBox', `0 0 ${w} ${hh}`);
+  let drew = 0;
+  for (const wire of c.wires || []) {
+    const a = byId.get(wire.from?.id);
+    const z = byId.get(wire.to?.id);
+    if (!a || !z) continue;
+    const ba = { l: a.x - l, t: a.y - t, r: a.x - l + a.w, b: a.y - t + a.h, cx: a.x - l + a.w / 2, cy: a.y - t + a.h / 2 };
+    const bz = { l: z.x - l, t: z.y - t, r: z.x - l + z.w, b: z.y - t + z.h, cx: z.x - l + z.w / 2, cy: z.y - t + z.h / 2 };
+    const auto = bestSides(ba, bz);
+    const s1 = wire.from.side || auto[0];
+    const s2 = wire.to.side || auto[1];
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathFor(sidePoint(ba, s1), s1, sidePoint(bz, s2), s2, wire.style || 'curve'));
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', wire.colour || '#a4abb3');
+    path.setAttribute('stroke-width', String(wire.weight || 2));
+    if (wire.dash) path.setAttribute('stroke-dasharray', '7 5');
+    svg.append(path);
+    drew++;
+    if (wire.label) {
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', String((ba.cx + bz.cx) / 2));
+      text.setAttribute('y', String((ba.cy + bz.cy) / 2 - 6));
+      text.setAttribute('class', 'doc-board-label');
+      text.textContent = wire.label;
+      svg.append(text);
+    }
+  }
+  if (drew) stage.append(svg);
+
+  const order = [...shapes].sort((a, z) =>
+    (a.kind === 'frame' ? 0 : 1) - (z.kind === 'frame' ? 0 : 1) || (a.z || 0) - (z.z || 0));
+
+  for (const s of order) {
+    const paint = boardPaint(s);
+    const box = h('div.doc-box', {
+      style: {
+        left: `${s.x - l}px`, top: `${s.y - t}px`, width: `${s.w}px`, height: `${s.h}px`,
+        background: paint.bg,
+        border: `${s.weight || 1.5}px ${s.dash || s.kind === 'frame' ? 'dashed' : 'solid'} ${paint.edge}`,
+        borderRadius: RADIUS[s.kind] || '3px',
+        color: paint.ink,
+        textAlign: s.align || 'center',
+        justifyContent: s.valign === 'top' ? 'flex-start' : s.valign === 'bottom' ? 'flex-end' : 'center',
+      },
+    });
+    if (s.src) box.append(h('img.doc-box-img', { src: mediaUrl(state.board.id, s.src), alt: stripHtml(s.html || '') }));
+    if (s.kind === 'frame' && s.title) box.append(h('span.doc-box-title', { text: s.title }));
+    if ((s.html || '').trim()) box.append(h('div.doc-box-text', { html: s.html }));
+    stage.append(box);
+  }
+
+  return h('div.doc-board', { style: { height: `${Math.round(hh * scale)}px` } },
+    h('h6', { text: 'the board' }), stage);
 }
 
 function appendSidenotes(body, c, blockId) {
@@ -186,6 +299,28 @@ export function cardToMarkdown(cardId, level = 1) {
     if (text) lines.push(`> ${text}`, '');
   }
 
+  // the board, flattened: every box, then every line between two of them.
+  // markdown has no canvas, so what carries over is what each box says and
+  // what points at what — which is the part you would have written down.
+  const shapes = c.shapes || [];
+  if (shapes.length) {
+    lines.push(`${'#'.repeat(Math.min(6, level + 1))} the board`, '');
+    const label = (s) => mdInline(s.html) || (s.src ? '(picture)' : s.title || '(empty box)');
+    for (const s of shapes) {
+      const bits = [label(s)];
+      if (s.src) bits.push(`![](${s.src})`);
+      lines.push(`- ${bits.join(' ')}`);
+    }
+    lines.push('');
+    const byId = new Map(shapes.map((s) => [s.id, s]));
+    const joins = (c.wires || []).filter((w) => byId.has(w.from?.id) && byId.has(w.to?.id));
+    for (const w of joins) {
+      const arrow = w.ends === 'both' ? '<->' : w.ends === 'none' ? '--' : '->';
+      lines.push(`- ${label(byId.get(w.from.id))} ${arrow} ${label(byId.get(w.to.id))}${w.label ? ` (${w.label})` : ''}`);
+    }
+    if (joins.length) lines.push('');
+  }
+
   lines.push('');
   for (const kid of childrenOf(cardId)) lines.push(cardToMarkdown(kid.id, level + 1));
   return lines.join('\n');
@@ -213,7 +348,7 @@ function mdInline(html) {
 */
 
 export async function exportClipList(doc, { csv = false } = {}) {
-  const { stampsInDoc, clipCsv, clipLines } = await import('./stamps.js?v=66fb115653');
+  const { stampsInDoc, clipCsv, clipLines } = await import('./stamps.js?v=5aab9d9b3f');
   const rows = stampsInDoc(doc);
 
   if (!rows.length) {
@@ -320,6 +455,15 @@ figcaption{font-size:13px;color:var(--muted);padding-top:8px;line-height:1.5}
 .doc-table th,.doc-table td{border:1px solid var(--line);padding:7px 10px;text-align:left}
 .doc-table th{background:#1e1235}
 .doc-todo{list-style:none;padding-left:4px}
+.doc-board{margin:22px 0;overflow:hidden}
+.doc-board h6{margin:0 0 10px;color:var(--muted);font-size:11px;letter-spacing:.09em;text-transform:uppercase}
+.doc-board-inner{position:relative;transform-origin:top left}
+.doc-board-lines{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible}
+.doc-board-label{font-size:11px;fill:var(--muted);text-anchor:middle}
+.doc-box{position:absolute;display:flex;flex-direction:column;padding:8px 11px;overflow:hidden;font-size:14px;line-height:1.4}
+.doc-box-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit}
+.doc-box-text{position:relative}
+.doc-box-title{position:absolute;left:8px;top:-20px;font-size:11px;color:var(--muted)}
 .doc-loose{margin-top:20px;padding-top:12px;border-top:1px dashed var(--line)}
 .doc-loose h6{margin:0 0 8px;color:var(--muted);font-size:11px;letter-spacing:.09em;text-transform:uppercase}
 .doc-loose-item{padding:8px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;font-size:.9em}

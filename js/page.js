@@ -2,20 +2,21 @@
    a main column, a margin gutter for side notes, and a free layer you can
    drop text anywhere on. */
 
-import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=66fb115653';
-import { icon } from './icons.js?v=66fb115653';
-import { mediaUrl } from './api.js?v=66fb115653';
-import { stampsOnCard, tidy, clipLines } from './stamps.js?v=66fb115653';
-import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting, SEV_LABEL, SEV_ORDER } from './store.js?v=66fb115653';
-import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=66fb115653';
-import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=66fb115653';
-import { initSelectionToolbar } from './toolbar.js?v=66fb115653';
-import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=66fb115653';
-import { stagger, animate, ping, EASE } from './motion.js?v=66fb115653';
-import { paintAnchors } from './anchors.js?v=66fb115653';
-import { paintWires, startWire, cancelWire, wiring } from './wires.js?v=66fb115653';
-import { mountVideoPanel } from './video.js?v=66fb115653';
-import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=66fb115653';
+import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=5aab9d9b3f';
+import { icon } from './icons.js?v=5aab9d9b3f';
+import { mediaUrl } from './api.js?v=5aab9d9b3f';
+import { stampsOnCard, tidy, clipLines } from './stamps.js?v=5aab9d9b3f';
+import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting, SEV_LABEL, SEV_ORDER } from './store.js?v=5aab9d9b3f';
+import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=5aab9d9b3f';
+import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=5aab9d9b3f';
+import { initSelectionToolbar } from './toolbar.js?v=5aab9d9b3f';
+import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=5aab9d9b3f';
+import { stagger, animate, ping, EASE } from './motion.js?v=5aab9d9b3f';
+import { paintAnchors } from './anchors.js?v=5aab9d9b3f';
+import { paintWires, startWire, cancelWire, wiring } from './wires.js?v=5aab9d9b3f';
+import { mountVideoPanel } from './video.js?v=5aab9d9b3f';
+import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=5aab9d9b3f';
+import { renderShapes, startMarquee, addShapeAt, addShape, clearShapeSelection, tidySelection, shapesOf, syncZoom, selectShape } from './shapes.js?v=5aab9d9b3f';
 
 let host = null;
 let sheet = null;
@@ -46,6 +47,11 @@ export const pageSheet = () => sheet;
 let viewport = null, plane = null;
 let view = { x: 0, y: 0, z: 1 };
 let spaceHeld = false;
+/* bumped by anything that deliberately moves the view. render() re-centres a
+   page that has never been panned one frame later, and this is what stops
+   that late frame from throwing away a zoom or a fit you asked for in
+   between. */
+let viewTouch = 0;
 
 export const pageZoom = () => view.z;
 export const planeEl = () => plane;
@@ -70,6 +76,7 @@ const persistView = rafThrottle(() => {
 });
 
 export function panBy(dx, dy) {
+  viewTouch++;
   view.x += dx;
   view.y += dy;
   applyView();
@@ -77,6 +84,7 @@ export function panBy(dx, dy) {
 }
 
 export function setPageZoom(next, at = null) {
+  viewTouch++;
   const z = clamp(Number(next) || 1, 0.2, 3);
   if (at && viewport) {
     const r = viewport.getBoundingClientRect();
@@ -88,10 +96,47 @@ export function setPageZoom(next, at = null) {
   view.z = z;
   applyView();
   persistView();
+  syncZoom();
   bus.emit('page:reflow');
 }
 
+/** zoom and pan so the paper *and* everything on the board is on screen at
+ *  once. on an endless plane this is the only way back from "where did i put
+ *  that box" without hunting for it. */
+export function fitBoard() {
+  if (!viewport || !sheet) return;
+  viewTouch++;
+  const c = card(state.cardId);
+  const boxes = shapesOf(c);
+  let l = 0, t = 0, r = sheet.offsetWidth || 900, b = sheet.offsetHeight || 700;
+  for (const s of boxes) {
+    l = Math.min(l, s.x); t = Math.min(t, s.y);
+    r = Math.max(r, s.x + s.w); b = Math.max(b, s.y + s.h);
+  }
+  const pad = 46;
+  const w = Math.max(200, r - l), hh = Math.max(200, b - t);
+  const vw = viewport.clientWidth, vh = viewport.clientHeight;
+  const z = clamp(Math.min((vw - pad * 2) / w, (vh - pad * 2) / hh), 0.2, 1.4);
+  view = { z, x: (vw - w * z) / 2 - l * z, y: (vh - hh * z) / 2 - t * z };
+  if (plane) plane.style.transition = 'transform 320ms cubic-bezier(.22,.61,.36,1)';
+  applyView();
+  syncZoom();
+  setTimeout(() => { if (plane) plane.style.transition = ''; }, 360);
+  persistView();
+  bus.emit('page:reflow');
+}
+
+/** put a box on screen and select it — what the outline list clicks through to */
+export function jumpToShape(id) {
+  selectShape(id);
+  const el = document.querySelector(`.shape[data-id="${CSS.escape(id)}"]`);
+  if (!el) return;
+  ensureVisible(el, { margin: 120 });
+  ping(el);
+}
+
 export function resetPageView() {
+  viewTouch++;
   view = centredView();
   if (plane) plane.style.transition = 'transform 320ms cubic-bezier(.22,.61,.36,1)';
   applyView();
@@ -142,9 +187,20 @@ function bindPlane() {
 
   viewport.addEventListener('pointerdown', (e) => {
     if (activeTool() !== 'select' && e.button === 0 && !spaceHeld) return;   // the whiteboard has the pointer
-    const onContent = e.target.closest('.page-sheet, .blk, .freebox, .sidenote, .video-panel, .page-status, .wb-rail, .wb-options, .wb-zoom');
+    const onContent = e.target.closest('.page-sheet, .blk, .freebox, .sidenote, .shape, .shape-groupbar, .video-panel, .page-status, .wb-rail, .wb-options, .wb-zoom');
+
+    // shift+drag on open plane rubber-bands a selection instead of panning.
+    // plain drag still pans, because that is the muscle memory this page has
+    // always had and nothing about it should change under people.
+    if (e.button === 0 && !onContent && e.shiftKey && !spaceHeld) {
+      e.preventDefault();
+      startMarquee(e);
+      return;
+    }
+
     const wantsPan = e.button === 1 || spaceHeld || (e.button === 0 && !onContent);
     if (!wantsPan) return;
+    if (e.button === 0 && !onContent) clearShapeSelection();
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY, ox = view.x, oy = view.y;
     viewport.classList.add('panning');
@@ -160,11 +216,11 @@ function bindPlane() {
     document.addEventListener('pointerup', up);
   });
 
-  // double-click out in the open drops a text box exactly there
+  // double-click out in the open drops a box exactly there, ready to type in
   viewport.addEventListener('dblclick', (e) => {
     if (activeTool() !== 'select') return;
-    if (e.target.closest('.page-sheet, .blk, .freebox, .sidenote, .wb-rail, .wb-options, .wb-zoom')) return;
-    addFreeBox({ x: e.clientX, y: e.clientY });
+    if (e.target.closest('.page-sheet, .blk, .freebox, .sidenote, .shape, .wb-rail, .wb-options, .wb-zoom')) return;
+    addShapeAt(toPlane(e.clientX, e.clientY));
   });
 }
 
@@ -183,7 +239,7 @@ export function toPlane(clientX, clientY) {
 function statusBar() {
   return h('div.page-status#page-status',
     h('div.status-left',
-      h('span.status-hint', { text: 'drag the background or hold space to pan · ctrl+wheel to zoom · c draws a line · v select, b pen, m marker, n note' })),
+      h('span.status-hint', { text: 'double-click the open plane for a box · drag a box’s dot to join it to another · shift+drag to select several · drag the background to pan, ctrl+wheel to zoom' })),
     h('div.status-right#status-right'));
 }
 
@@ -195,10 +251,16 @@ export function paintStatus() {
   const s = pageStats(state.cardId);
   clear(right);
   // Element.append stringifies null into the literal text "null" — filter first
+  const boxes = (card(state.cardId)?.shapes || []).length;
+  const lines = (card(state.cardId)?.wires || []).length;
   right.append(...[
     h('span.status-item', { text: `${s.words} words` }),
     h('span.status-sep'),
     h('span.status-item', { text: `${s.blocks} blocks` }),
+    boxes ? h('span.status-sep') : null,
+    boxes ? h('span.status-item', { text: `${boxes} ${boxes === 1 ? 'box' : 'boxes'}` }) : null,
+    lines ? h('span.status-sep') : null,
+    lines ? h('span.status-item', { text: `${lines} ${lines === 1 ? 'line' : 'lines'}` }) : null,
     s.pictures ? h('span.status-sep') : null,
     s.pictures ? h('span.status-item', { text: `${s.pictures} pictures` }) : null,
     s.todo ? h('span.status-sep') : null,
@@ -225,28 +287,35 @@ export function render() {
   plane = h('div.page-plane');
   sheet = h('div.page-sheet');
 
-  sheet.append(pageTop(c));
+  const chrome = chromeOf(c);
+  const top = pageTop(c, chrome);
+  if (top) sheet.append(top);
   const canvas = h('div.page-canvas',
     h('div.page-cols',
       h('div.page-gutter.gutter-left#page-gutter-left'),
       h('div.page-main#page-main'),
       h('div.page-gutter.gutter-right#page-gutter')));
   sheet.append(canvas);
-  sheet.append(kidsStrip(c));
+  if (chrome.kids) sheet.append(kidsStrip(c));
 
   // free layer + connectors live on the plane, not inside the paper — that is
   // what lets a line of text be dragged off into open space and stay there
-  plane.append(sheet, h('div.page-free#page-free'), svgLayer(), wireLayer());
+  // the paper is furniture like anything else: a page can be told not to have
+  // one, and then the plane is all there is. the sheet is still built, just not
+  // put on the plane, so the few places that measure it keep working.
+  if (chrome.paper) plane.append(sheet);
+  plane.append(h('div.page-shapes#page-shapes'), h('div.page-free#page-free'), svgLayer(), wireLayer());
   viewport.append(plane);
   work.append(viewport, statusBar());
   shell.append(sideBar(), work);
   host.append(shell);
   mountVideoPanel(host);
 
-  renderBlocks($('#page-main'), c.id);
+  if (chrome.paper) renderBlocks($('#page-main'), c.id);
   paintMeta();
   renderSidenotes();
   renderFreeBoxes();
+  renderShapes();
 
   view = c.pageView ? { ...c.pageView } : centredView();
   applyView();
@@ -258,9 +327,14 @@ export function render() {
   paintAnchors();
   paintWires();
   paintStatus();
+  const mark = viewTouch;
+  if (!chrome.paper && (c.blocks || []).some((b) => (b.html || '').trim() || b.type === 'image')) {
+    plane.append(hiddenPaperChip(c));
+  }
+
   requestAnimationFrame(() => {
     stagger($$('.blk', sheet).slice(0, 12), { step: 18, distance: 8 });
-    if (!c.pageView) { view = centredView(); applyView(); }
+    if (!c.pageView && viewTouch === mark) { view = centredView(); applyView(); }
     layoutSidenotes();
     paintAnchors();
     paintWires();
@@ -269,10 +343,13 @@ export function render() {
   sheet.addEventListener('click', (e) => {
     // clicking the empty space under the doc puts the caret on a new last line
     if (e.target !== sheet && e.target !== canvas) return;
-    const blocks = card(state.cardId).blocks;
+    const blocks = card(state.cardId).blocks || [];
     const last = blocks[blocks.length - 1];
-    if (last && last.type === 'p' && !last.html) focusBlock(last.id, 'end');
-    else if (last) insertBlock(last.id, { type: 'p' }, true);
+    // a page really can have no blocks at all now, and clicking the paper is
+    // how you start the first one
+    if (!last) { insertBlock(null, { type: 'p' }, true); return; }
+    if (last.type === 'p' && !last.html) focusBlock(last.id, 'end');
+    else insertBlock(last.id, { type: 'p' }, true);
   });
 }
 
@@ -302,7 +379,7 @@ function wireLayer() {
 
 const SIDE_TABS = [
   ['outline', 'outline', 'listUl', 'headings and sub-pages, in order'],
-  ['shots', 'pictures', 'image', 'every picture on this page'],
+  ['shots', 'images', 'image', 'the pictures on this page, and the ones you drop on often'],
   ['timeline', 'timeline', 'clock', 'every timestamp — click one to jump the vod'],
   ['drills', 'drills', 'drill', 'every flagged note, worst first'],
   ['tags', 'tags', 'tag', 'click a tag and the rest of the page fades back'],
@@ -370,7 +447,7 @@ export function paintSide() {
   body.append(h('div.side-cap', h('b', { text: tab[1] }), h('span', { text: tab[3] })));
 
   if (sideTab === 'outline') paintOutline(body, c);
-  else if (sideTab === 'shots') paintShots(body, c);
+  else if (sideTab === 'shots') paintImages(body, c);
   else if (sideTab === 'timeline') paintTimeline(body, c);
   else if (sideTab === 'drills') paintDrills(body, c);
   else if (sideTab === 'tags') paintTags(body, c);
@@ -393,10 +470,11 @@ function paintOutline(body, c) {
     }
   }
 
-  if (!rows.length) {
+  if (!rows.length && !(c.shapes || []).length) {
     body.append(h('div.side-empty',
       h('p', { text: 'headings show up here as you write them.' }),
-      h('button.btn.btn-sm', { on: { click: () => addHeading() } }, icon('h2', { size: 13 }), 'add a heading')));
+      h('button.btn.btn-sm', { on: { click: () => addHeading() } }, icon('h2', { size: 13 }), 'add a heading'),
+      h('button.btn.btn-sm', { on: { click: () => addShape() } }, icon('roundBox', { size: 13 }), 'put a box on the board')));
     return;
   }
 
@@ -414,29 +492,144 @@ function paintOutline(body, c) {
       h('span.side-text', { text: row.text }),
       row.folded ? h('span.side-ico', icon('collapse', { size: 12 })) : null));
   }
-  body.append(list);
+  if (rows.length) body.append(list);
+  paintBoardList(body, c);
   markOutlinePosition();
 }
 
-function paintShots(body, c) {
-  const shots = (c.blocks || []).filter((b) => b.type === 'image' && b.src);
-  if (!shots.length) {
-    body.append(h('div.side-empty',
-      h('p', { text: 'paste a screenshot with ctrl+v and it lands here.' }),
-      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=66fb115653')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
-        icon('image', { size: 13 }), 'add a picture')));
-    return;
-  }
-  const grid = h('div.side-shots');
-  shots.forEach((block, i) => {
-    grid.append(h('button.side-shot', {
-      tip: stripHtml(block.caption || '') || `picture ${i + 1}`,
-      on: { click: () => jumpToBlock(block.id) },
+/* the board has no reading order, so the outline can't fold it in — but a
+   plain list of what is out there is how you find a box you put down twenty
+   minutes ago and have since panned away from. */
+function paintBoardList(body, c) {
+  const boxes = (c.shapes || []).filter((s) => s.kind !== 'frame');
+  const frames = (c.shapes || []).filter((s) => s.kind === 'frame');
+  if (!boxes.length && !frames.length) return;
+
+  body.append(h('div.side-cap.side-cap-sub',
+    h('b', { text: 'on the board' }),
+    h('span', { text: `${boxes.length} box${boxes.length === 1 ? '' : 'es'}${frames.length ? `, ${frames.length} frame${frames.length === 1 ? '' : 's'}` : ''}` })));
+
+  const list = h('div.side-list');
+  for (const s of [...frames, ...boxes]) {
+    const text = stripHtml(s.html || '').trim() || s.title || (s.src ? 'picture' : 'empty box');
+    list.append(h('button.side-row', {
+      data: { shape: s.id },
+      on: {
+        click: () => jumpToShape(s.id),
+        contextmenu: (e) => {
+          e.preventDefault();
+          import('./shapes.js?v=5aab9d9b3f').then((m) => m.shapeMenu(s.id, e.clientX, e.clientY));
+        },
+      },
     },
-      h('img', { src: mediaUrl(state.board.id, block.src), loading: 'lazy', alt: '' }),
-      (block.pins || []).length ? h('span.side-shot-pins', { text: String(block.pins.length) }) : null));
+      h('span.side-swatch', { style: { background: s.tone === 'solid' && s.fill ? s.fill : 'transparent', borderColor: s.fill || 'var(--line)' } }),
+      h('span.side-text', { text: text.slice(0, 70) }),
+      s.src ? h('span.side-ico', icon('image', { size: 11 })) : null));
+  }
+  body.append(list);
+}
+
+/* ---------------------------------------------------------------- images
+
+   two halves. the top is what is already in this session — the pictures in
+   the column and the ones sitting in boxes on the board — so you can find one
+   and jump to it. the bottom is the preset library (js/presets.js): the
+   symbols you put down over and over, plus anything you have saved yourself.
+   click one and it lands in the middle of what you are looking at.
+*/
+
+function paintImages(body, c) {
+  const shots = (c.blocks || []).filter((b) => b.type === 'image' && b.src);
+  const boxed = (c.shapes || []).filter((sh) => sh.src);
+
+  if (!shots.length && !boxed.length) {
+    body.append(h('div.side-empty',
+      h('p', { text: 'paste a screenshot with ctrl+v, or drag one onto the plane and it becomes a box.' }),
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=5aab9d9b3f')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
+        icon('image', { size: 13 }), 'add a picture')));
+  } else {
+    const grid = h('div.side-shots');
+    shots.forEach((block, i) => {
+      grid.append(h('button.side-shot', {
+        tip: stripHtml(block.caption || '') || `picture ${i + 1}`,
+        on: { click: () => jumpToBlock(block.id) },
+      },
+        h('img', { src: mediaUrl(state.board.id, block.src), loading: 'lazy', alt: '' }),
+        (block.pins || []).length ? h('span.side-shot-pins', { text: String(block.pins.length) }) : null));
+    });
+    for (const sh of boxed) {
+      grid.append(h('button.side-shot', {
+        tip: stripHtml(sh.html || '') || 'a picture on the board',
+        on: { click: () => jumpToShape(sh.id) },
+      },
+        h('img', { src: mediaUrl(state.board.id, sh.src), loading: 'lazy', alt: '' }),
+        h('span.side-shot-pins', icon('roundBox', { size: 10 }))));
+    }
+    body.append(grid);
+  }
+
+  paintPresets(body);
+}
+
+async function dropPresetHere(preset) {
+  const { dropPreset } = await import('./presets.js?v=5aab9d9b3f');
+  const vp = viewport?.getBoundingClientRect();
+  const at = vp
+    ? toPlane(vp.left + vp.width * 0.55, vp.top + vp.height * 0.45)
+    : { x: 200, y: 200 };
+  const made = await dropPreset(preset, at);
+  if (made) toast(`${preset.name} — drag it where you want it`, { ms: 2200 });
+}
+
+function paintPresets(body) {
+  import('./presets.js?v=5aab9d9b3f').then((lib) => {
+    const host = $('#side-presets');
+    if (!host) return;
+    clear(host);
+    const list = lib.allPresets();
+
+    for (const [group, label] of lib.GROUPS) {
+      const mine = list.filter((p) => p.group === group);
+      if (!mine.length) continue;
+      host.append(h('div.side-group-cap', { text: label }));
+      const grid = h('div.side-presets');
+      for (const preset of mine) {
+        const cell = h('button.side-preset', {
+          tip: preset.name,
+          on: {
+            click: () => dropPresetHere(preset),
+            contextmenu: (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              contextMenu([
+                { header: preset.name },
+                { label: 'put it on the board', icon: 'roundBox', onPick: () => dropPresetHere(preset) },
+                { label: 'rename it', icon: 'pen', onPick: () => lib.renamePreset(preset.id).then(() => paintSide()) },
+                { sep: true },
+                { label: 'delete it', icon: 'trash', danger: true, onPick: () => lib.deletePreset(preset.id).then(() => paintSide()) },
+              ], { x: e.clientX, y: e.clientY, width: 210 });
+            },
+          },
+        });
+        if (preset.island) cell.append(h('span.side-preset-map', icon('target', { size: 18 })));
+        else cell.append(h('img', { src: lib.presetSrc(preset), loading: 'lazy', alt: preset.name }));
+        cell.append(h('span.side-preset-name', { text: preset.name }));
+        grid.append(cell);
+      }
+      host.append(grid);
+    }
+
+    host.append(h('div.side-foot',
+      h('button.btn.btn-sm', { on: { click: () => lib.pickPresetFile().then(() => paintSide()) } }, icon('plus', { size: 13 }), 'add one of yours'),
+      lib.deletedCount()
+        ? h('button.btn.btn-sm', { on: { click: () => { lib.restorePresets(); paintSide(); } } }, icon('undo', { size: 13 }), `put back ${lib.deletedCount()}`)
+        : null));
   });
-  body.append(grid);
+
+  body.append(h('div.side-cap.side-cap-sub',
+    h('b', { text: 'drop-on pictures' }),
+    h('span', { text: 'click one to put it on the board · right-click to rename or delete' })));
+  body.append(h('div#side-presets'));
 }
 
 /* ---------------------------------------------------------------- timeline
@@ -465,7 +658,7 @@ function paintTimeline(body, c) {
   if (!rows.length) {
     body.append(h('div.side-empty',
       h('p', { text: 'press t while the vod plays and the moment lands here.' }),
-      h('button.btn.btn-sm', { on: { click: async () => (await import('./video.js?v=66fb115653')).insertTimestamp(currentBlockId() || c.blocks.at(-1)?.id) } },
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./video.js?v=5aab9d9b3f')).insertTimestamp(currentBlockId() || c.blocks.at(-1)?.id) } },
         icon('clock', { size: 13 }), 'stamp this moment')));
     return;
   }
@@ -489,7 +682,7 @@ function paintTimeline(body, c) {
 }
 
 async function goToStamp(row) {
-  try { (await import('./video.js?v=66fb115653')).seekTo(row.t); } catch { /* no video panel is fine */ }
+  try { (await import('./video.js?v=5aab9d9b3f')).seekTo(row.t); } catch { /* no video panel is fine */ }
   if (row.kind === 'card') { openCardPage(row.ref); return; }
   if (row.kind === 'block') { jumpToBlock(row.ref); return; }
   const el = $(row.kind === 'side' ? `.sidenote[data-id="${CSS.escape(row.ref)}"]` : `.freebox[data-id="${CSS.escape(row.ref)}"]`);
@@ -659,7 +852,7 @@ function paintAddPalette(body, c) {
   const at = () => currentBlockId() || lastId();
 
   const add = async (type, extra) => {
-    const ed = await import('./editor.js?v=66fb115653');
+    const ed = await import('./editor.js?v=5aab9d9b3f');
     const made = ed.insertBlock(at(), { type: 'p' }, false);
     if (type === 'p') { ed.focusBlock(made.id, 'end'); return; }
     ed.setType(made.id, type, extra);
@@ -677,11 +870,15 @@ function paintAddPalette(body, c) {
     ['code', 'codeTag', () => add('code')],
     ['divider', 'divider', () => add('divider')],
     ['table', 'table', () => add('table', { rows: [['', '', ''], ['', '', ''], ['', '', '']], header: true })],
-    ['picture', 'image', async () => (await import('./images.js?v=66fb115653')).pickImageFile(at())],
-    ['text box', 'textbox', () => addFreeBox()],
+    ['picture', 'image', async () => (await import('./images.js?v=5aab9d9b3f')).pickImageFile(at())],
+    ['box', 'roundBox', () => addShape()],
+    ['sticky note', 'note', () => addShape({ kind: 'sticky', fill: '#ffd54a', tone: 'solid', align: 'left', valign: 'top', w: 180, h: 170 })],
+    ['decision', 'diamond', () => addShape({ kind: 'diamond' })],
+    ['frame', 'frame', () => addShape({ kind: 'frame', w: 520, h: 360 })],
+    ['text box', 'textbox', () => addShape({ kind: 'rect', tone: 'text', align: 'left', valign: 'top', w: 240, h: 60 })],
     ['margin note', 'sidenote', () => addSidenoteFromSelection()],
     ['sub-page', 'cards', () => addSubPage(at())],
-    ['timestamp', 'clock', async () => (await import('./video.js?v=66fb115653')).insertTimestamp(at())],
+    ['timestamp', 'clock', async () => (await import('./video.js?v=5aab9d9b3f')).insertTimestamp(at())],
   ];
 
   body.append(h('div.side-grid', ...items.map(([label, ico, run]) => h('button.side-add', {
@@ -783,7 +980,7 @@ export function markOutlinePosition() {
 }
 
 async function addHeading() {
-  const ed = await import('./editor.js?v=66fb115653');
+  const ed = await import('./editor.js?v=5aab9d9b3f');
   const last = card(state.cardId).blocks.at(-1)?.id;
   const made = ed.insertBlock(last, { type: 'p' }, false);
   ed.setType(made.id, 'h2');
@@ -791,7 +988,8 @@ async function addHeading() {
 
 /* ---------------------------------------------------------------- header */
 
-function pageTop(c) {
+function pageTop(c, chrome = chromeOf(c)) {
+  if (!chrome.title && !chrome.meta) return null;
   const isRoot = !c.parent;
   const title = h('h1.page-title', {
     contenteditable: 'true',
@@ -819,9 +1017,55 @@ function pageTop(c) {
   });
 
   return h('header.page-top',
-    title,
-    h('div.page-meta#page-meta'),
+    chrome.title ? title : null,
+    chrome.meta ? h('div.page-meta#page-meta') : null,
   );
+}
+
+/* ---------------------------------------------------------------- chrome
+
+   every piece of furniture on a page can be taken away: the paper itself, the
+   title, the row of flags and tags, the strip of sub-pages. the flags live on
+   the card, so one session can be a written page and the next a bare board.
+   nothing here deletes any content — the writing is still in the document and
+   the chip below says so. */
+
+export const CHROME_PARTS = [
+  ['paper', 'the paper', 'the written column in the middle'],
+  ['title', 'the title', 'the big line at the top of the paper'],
+  ['meta', 'flags and tags', 'the row under the title'],
+  ['kids', 'sub-pages', 'the strip of pages under this one'],
+];
+
+export const chromeOf = (c) => ({
+  paper: c?.chrome?.paper !== false,
+  title: c?.chrome?.title !== false,
+  meta: c?.chrome?.meta !== false,
+  kids: c?.chrome?.kids !== false,
+});
+
+export function setChrome(part, on) {
+  const id = state.cardId;
+  commit(on ? `show ${part}` : `hide ${part}`, (b) => {
+    const c = b.cards[id];
+    if (!c) return;
+    c.chrome = { ...(c.chrome || {}), [part]: on };
+  });
+  render();
+  if (!on && part === 'paper') {
+    toast('the paper is hidden — nothing was deleted, and the page menu brings it back', { ms: 4200 });
+  }
+}
+
+/** a page with its paper hidden but writing still on it says so, rather than
+ *  quietly swallowing a page of notes */
+function hiddenPaperChip(c) {
+  const n = (c.blocks || []).filter((b) => (b.html || '').trim() || b.type === 'image').length;
+  return h('button.paper-chip', {
+    tip: 'the paper is hidden on this page — click to bring it back',
+    style: { left: '18px', top: '18px' },
+    on: { click: () => setChrome('paper', true) },
+  }, icon('page', { size: 13 }), h('span', { text: `${n} line${n === 1 ? '' : 's'} on the hidden paper` }));
 }
 
 function paintMeta() {
@@ -844,7 +1088,7 @@ function paintMeta() {
   if (c.t !== null && c.t !== undefined) {
     wrap.append(h('button.chip.chip-time', {
       tip: 'jump the video here',
-      on: { click: async () => (await import('./video.js?v=66fb115653')).seekTo(c.t) },
+      on: { click: async () => (await import('./video.js?v=5aab9d9b3f')).seekTo(c.t) },
     }, icon('clock', { size: 12 }), fmtClock(c.t)));
   }
 
@@ -879,13 +1123,13 @@ function tagMenu(anchor) {
   const existing = allTags().map(([t]) => t).filter((t) => !(c.tags || []).includes(t));
   const input = h('input.field', { placeholder: 'new tag…', spellcheck: false });
   const list = h('div.tag-pop-list', ...existing.slice(0, 8).map((t) => h('button.menu-row', {
-    on: { click: () => { addTag(t); import('./ui.js?v=66fb115653').then((m) => m.closePopover()); } },
+    on: { click: () => { addTag(t); import('./ui.js?v=5aab9d9b3f').then((m) => m.closePopover()); } },
   }, h('span.menu-ico', { text: '#' }), h('span.menu-label', { text: t }))));
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const value = input.value.trim().replace(/^#/, '').toLowerCase().replace(/\s+/g, '-');
       if (value) addTag(value);
-      import('./ui.js?v=66fb115653').then((m) => m.closePopover());
+      import('./ui.js?v=5aab9d9b3f').then((m) => m.closePopover());
     }
   });
   popover(h('div.tag-pop', input, existing.length ? list : null), { anchor, width: 210 });
@@ -902,30 +1146,47 @@ function addTag(tag) {
   bus.emit('boards');
 }
 
+/** the show/hide switches for this page's furniture, offered in three places:
+ *  the page menu, the plane's right-click menu and the command palette */
+export function chromeItems() {
+  const c = card(state.cardId);
+  const now = chromeOf(c);
+  return CHROME_PARTS.map(([part, label, blurb]) => ({
+    label,
+    hint: blurb,
+    icon: now[part] ? 'eye' : 'close',
+    checked: now[part],
+    onPick: () => setChrome(part, !now[part]),
+  }));
+}
+
 function pageMenu(anchor) {
   const c = card(state.cardId);
   contextMenu([
     { label: 'open the map', icon: 'grid', hint: 'ctrl+b', onPick: () => toggleMap() },
-    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=66fb115653')).openReader() },
+    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=5aab9d9b3f')).openReader() },
     { sep: true },
     { label: 'add a sub-page', icon: 'cards', onPick: () => addSubPage(null) },
-    { label: 'floating text box', icon: 'textbox', hint: 'ctrl+shift+t', onPick: () => addFreeBox() },
+    { label: 'put a box on the board', icon: 'roundBox', hint: 'r', onPick: () => addShape() },
+    { label: 'text box', icon: 'textbox', hint: 'ctrl+shift+t', onPick: () => addShape({ kind: 'rect', tone: 'text', align: 'left', valign: 'top', w: 240, h: 60 }) },
     { label: 'draw a line between two things', icon: 'link', hint: 'c', onPick: () => startWire() },
+    { label: 'tidy the boxes into a grid', icon: 'tidy', hint: 'whole board', onPick: () => tidySelection() },
+    { label: 'what this page shows', icon: 'eye', subWidth: 240, sub: chromeItems() },
     { label: 'arrange this page…', icon: 'grid', hint: 'presets',
-      onPick: async () => (await import('./layouts.js?v=66fb115653')).openLayouts() },
+      onPick: async () => (await import('./layouts.js?v=5aab9d9b3f')).openLayouts() },
     { sep: true },
     { label: 'loot routes', icon: 'target', hint: 'map',
-      onPick: async () => (await import('./lootmap.js?v=66fb115653')).openLootmap() },
+      onPick: async () => (await import('./lootmap.js?v=5aab9d9b3f')).openLootmap() },
     { label: 'earlier versions of this session', icon: 'history',
-      onPick: async () => (await import('./history.js?v=66fb115653')).openHistory() },
+      onPick: async () => (await import('./history.js?v=5aab9d9b3f')).openHistory() },
     { label: 'save this page as a template', icon: 'copy', hint: 'reuse',
-      onPick: async () => (await import('./templates.js?v=66fb115653')).saveAsTemplate(c) },
+      onPick: async () => (await import('./templates.js?v=5aab9d9b3f')).saveAsTemplate(c) },
     { sep: true },
-    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=66fb115653')).exportMarkdown(c.id) },
-    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=66fb115653')).exportHtml(c.id) },
-    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=66fb115653')).exportSession(state.board.id) },
+    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=5aab9d9b3f')).exportMarkdown(c.id) },
+    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=5aab9d9b3f')).exportHtml(c.id) },
+    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=5aab9d9b3f')).exportSession(state.board.id) },
     { label: 'export the clip list', icon: 'clock', hint: '.csv',
-      onPick: async () => (await import('./exporter.js?v=66fb115653')).exportClipList(state.board, { csv: true }) },
+      onPick: async () => (await import('./exporter.js?v=5aab9d9b3f')).exportClipList(state.board, { csv: true }) },
     ...(c.parent ? [{ sep: true }, { label: 'delete this page', icon: 'trash', danger: true, onPick: () => removePage(c) }] : []),
   ], { anchor, align: 'end' });
 }
@@ -1011,7 +1272,7 @@ export function addSidenoteFromSelection() {
   const noteId = uid('sn');
   const sel = getSelection();
   if (sel && !sel.isCollapsed) {
-    import('./editor.js?v=66fb115653').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
+    import('./editor.js?v=5aab9d9b3f').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
   } else {
     const mark = document.createElement('span');
     mark.setAttribute('data-side', noteId);
@@ -1115,36 +1376,14 @@ export function layoutSidenotes() {
   }
 }
 
-/* ---------------------------------------------------------------- free boxes */
+/* ---------------------------------------------------------------- free boxes
 
-export function addFreeBox(at = null) {
-  const cardId = state.cardId;
-  const spot = at ? toPlane(at.x, at.y) : toPlane(
-    (viewport.getBoundingClientRect().left + viewport.clientWidth * 0.78),
-    (viewport.getBoundingClientRect().top + 160));
-  const box = { id: uid('fb'), x: spot.x, y: spot.y, w: 210, h: 96, html: '' };
-  return placeBox(box, cardId);
-}
-
-/** a webex-style sticky note: same free box, bright paper, dark ink */
-export function addStickyAt(planePoint, colour) {
-  const cardId = state.cardId;
-  const box = {
-    id: uid('fb'), kind: 'sticky', colour,
-    x: Math.round(planePoint.x - 90), y: Math.round(planePoint.y - 70),
-    w: 180, h: 140, html: '',
-  };
-  return placeBox(box, cardId);
-}
-
-function placeBox(box, cardId) {
-  commit(box.kind === 'sticky' ? 'sticky note' : 'text box', (b) => { (b.cards[cardId].free ||= []).push(box); });
-  renderFreeBoxes();
-  const el = $(`.freebox[data-id="${box.id}"]`);
-  el?.querySelector('.freebox-body')?.focus();
-  if (el) animate(el, [{ opacity: 0, transform: 'scale(.88) rotate(-1.5deg)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: EASE.snap });
-  return box;
-}
+   the old floating text boxes. nothing makes a new one any more — a text box
+   and a sticky note are both shapes now (js/shapes.js), so they can be
+   selected with a marquee, lined up with everything else and joined with a
+   line. everything below is here because boards written before that still
+   have `free[]` in them, and they must keep dragging, resizing and taking a
+   wire exactly as they did. */
 
 function renderFreeBoxes() {
   const layer = $('#page-free');
@@ -1187,7 +1426,7 @@ function freeBoxEl(box) {
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      import('./whiteboard.js?v=66fb115653').then(({ STICKY_COLOURS }) => {
+      import('./whiteboard.js?v=5aab9d9b3f').then(({ STICKY_COLOURS }) => {
         contextMenu([
           { row: STICKY_COLOURS.map((c) => ({ icon: 'callout', color: c, tip: 'recolour', onPick: () => {
             const cardId = state.cardId;

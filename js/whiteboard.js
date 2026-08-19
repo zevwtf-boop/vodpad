@@ -1,16 +1,19 @@
-/* the whiteboard layer.
+/* the whiteboard tool rail.
 
-   a webex-style tool rail down the left of the plane: pen, highlighter,
-   shapes, sticky notes, text and an eraser. ink lives on the plane in plane
-   coordinates, so it pans and zooms with everything else and never touches
-   your text.
+   a webex-style rail down the left of the plane. the top half puts *things*
+   on the board — boxes, sticky notes, text, pictures, frames, and the lines
+   between them (js/shapes.js owns those). the bottom half is ink: pen,
+   highlighter, freehand shapes and an eraser, drawn straight onto the plane
+   in plane coordinates so it pans and zooms with everything else and never
+   touches your text.
 */
 
-import { $, $$, h, clear, uid, clamp, debounce } from './util.js?v=66fb115653';
-import { icon } from './icons.js?v=66fb115653';
-import { state, card, commit, quietly, bus, undo, redo, canUndo, canRedo } from './store.js?v=66fb115653';
-import { toast, contextMenu } from './ui.js?v=66fb115653';
-import { animate, popIn, EASE } from './motion.js?v=66fb115653';
+import { $, $$, h, clear, uid } from './util.js?v=5aab9d9b3f';
+import { icon } from './icons.js?v=5aab9d9b3f';
+import { state, card, commit, bus, undo, redo } from './store.js?v=5aab9d9b3f';
+import { toast } from './ui.js?v=5aab9d9b3f';
+import { FILLS, KINDS, shapePen, setShapePen, startDrawShape, addShapeAt } from './shapes.js?v=5aab9d9b3f';
+import { startWire, wiring, cancelWire } from './wires.js?v=5aab9d9b3f';
 
 export const PEN_COLOURS = [
   ['chalk', 'var(--text)'],
@@ -23,15 +26,21 @@ export const PEN_COLOURS = [
 
 export const STICKY_COLOURS = ['#ffd54a', '#ff9db1', '#8ce99a', '#74c0fc', '#d3b4ff', '#ffb27a'];
 
+/* two groups, one rail. the separator between them is the difference between
+   "put something on the board" and "draw on top of it". */
 const TOOLS = [
   ['select', 'target', 'select · v'],
+  ['box', 'roundBox', 'box · r'],
+  ['sticky', 'note', 'sticky note · n'],
+  ['text', 'textTool', 'text · x'],
+  ['picture', 'image', 'picture'],
+  ['frame', 'frame', 'frame · f'],
+  ['connect', 'link', 'join two things · c'],
+  null,
   ['pen', 'pen', 'pen · b'],
   ['marker', 'highlight', 'highlighter · m'],
-  ['shape', 'box', 'shapes · r'],
-  ['sticky', 'callout', 'sticky note · n'],
-  ['text', 'textTool', 'text box · x'],
-  ['picture', 'image', 'picture'],
-  ['eraser', 'eraser', 'eraser · e'],
+  ['shape', 'ellipse', 'draw a shape in ink · shift+r'],
+  ['eraser', 'eraser', 'rub ink out · e'],
 ];
 
 const SHAPES = [
@@ -39,6 +48,12 @@ const SHAPES = [
   ['ellipse', 'ellipse', 'ellipse'],
   ['arrow', 'arrow', 'arrow'],
   ['line', 'line', 'line'],
+];
+
+const TONES = [
+  ['solid', 'box', 'solid'],
+  ['soft', 'highlight', 'soft tint'],
+  ['none', 'ellipse', 'outline only'],
 ];
 
 let tool = 'select';
@@ -51,7 +66,10 @@ let temp = null;
 let host = null;
 
 export const activeTool = () => tool;
+/** true when the pointer belongs to a tool rather than to selection */
 export const inkBusy = () => tool !== 'select';
+/** the tools that draw a thing by dragging a box out on the plane */
+export const boxTool = () => tool === 'box' || tool === 'frame';
 
 /* ---------------------------------------------------------------- mounting */
 
@@ -68,6 +86,7 @@ export function mountWhiteboard(work, viewport, plane) {
 }
 
 export function setTool(next) {
+  if (next !== 'connect' && wiring()) cancelWire();
   tool = next;
   paintTool();
   const vp = $('.page-viewport');
@@ -80,7 +99,9 @@ function paintTool() {
   if (!strip) return;
   clear(strip);
   const drawing = ['pen', 'marker', 'shape'].includes(tool);
-  strip.classList.toggle('show', drawing || tool === 'sticky');
+  strip.classList.toggle('show', drawing || tool === 'sticky' || boxTool());
+
+  if (boxTool()) { paintBoxOptions(strip); return; }
 
   if (tool === 'sticky') {
     strip.append(h('div.wb-swatches', ...STICKY_COLOURS.map((c) => h('button.wb-swatch', {
@@ -108,24 +129,50 @@ function paintTool() {
     }, h('i', { style: { width: `${Math.min(14, n + 2)}px`, height: `${Math.min(14, n + 2)}px` } })))));
 }
 
+/** what the next box will look like: its outline, its fill, how it is filled.
+ *  the same three choices are on a box's right-click menu, so this panel is a
+ *  shortcut rather than the only way in. */
+function paintBoxOptions(strip) {
+  const pen = shapePen();
+  strip.append(h('div.wb-label', { text: tool === 'frame' ? 'frame' : 'next box' }));
+  strip.append(h('div.wb-kinds', ...KINDS.filter(([k]) => k !== 'frame').map(([kind, ico, tip]) => h('button.wb-shape', {
+    class: pen.kind === kind ? 'on' : '', tip,
+    on: { click: () => { setShapePen({ kind }); paintTool(); } },
+  }, icon(ico, { size: 15 })))));
+  strip.append(h('div.wb-swatches.wb-wrap', ...FILLS.map(([name, hex]) => h('button.wb-swatch', {
+    class: pen.fill === hex ? 'on' : '', style: { background: hex }, tip: name,
+    on: { click: () => { setShapePen({ fill: hex }); paintTool(); } },
+  }))));
+  strip.append(h('div.wb-shapes', ...TONES.map(([id, ico, tip]) => h('button.wb-shape', {
+    class: pen.tone === id ? 'on' : '', tip,
+    on: { click: () => { setShapePen({ tone: id }); paintTool(); } },
+  }, icon(ico, { size: 15 })))));
+  strip.append(h('div.wb-hint', { text: 'drag to draw it, or click for a standard one' }));
+}
+
 function rail() {
   return h('div.wb-rail',
-    ...TOOLS.map(([id, ico, tip]) => h('button.wb-tool', {
-      class: tool === id ? 'on' : '', data: { tool: id }, tip,
-      on: { click: () => pickTool(id) },
-    }, icon(ico, { size: 17 }))),
+    ...TOOLS.map((entry) => (entry ? h('button.wb-tool', {
+      class: tool === entry[0] ? 'on' : '', data: { tool: entry[0] }, tip: entry[2],
+      on: { click: () => pickTool(entry[0]) },
+    }, icon(entry[1], { size: 17 })) : h('div.wb-rail-sep'))),
     h('div.wb-rail-sep'),
     h('button.wb-tool.wb-small', { tip: 'undo · ctrl+z', on: { click: () => { const l = undo(); if (l) toast(`undid ${l}`, { ms: 1200 }); } } }, icon('undo', { size: 16 })),
     h('button.wb-tool.wb-small', { tip: 'redo · ctrl+shift+z', on: { click: () => { const l = redo(); if (l) toast(`redid ${l}`, { ms: 1200 }); } } }, icon('redo', { size: 16 })),
-    h('button.wb-tool.wb-small', { tip: 'clear all ink on this page', on: { click: clearInk } }, icon('trash', { size: 16 })),
+    h('button.wb-tool.wb-small', { tip: 'rub out every ink mark on this page', on: { click: clearInk } }, icon('eraser', { size: 16 })),
   );
 }
 
 async function pickTool(id) {
   if (id === 'picture') {
-    const { pickImageFile } = await import('./images.js?v=66fb115653');
+    const { pickImageFile } = await import('./images.js?v=5aab9d9b3f');
     const blocks = card(state.cardId)?.blocks || [];
     pickImageFile(blocks.at(-1)?.id);
+    return;
+  }
+  if (id === 'connect') {
+    setTool('select');
+    startWire();
     return;
   }
   setTool(id);
@@ -133,11 +180,13 @@ async function pickTool(id) {
 }
 
 const hintFor = (id) => ({
+  box: 'drag out a box, or click to drop a standard one',
+  frame: 'drag out a frame — everything inside it moves with it',
+  sticky: 'click to drop a sticky note',
+  text: 'click anywhere to start writing there',
   pen: 'draw anywhere on the plane',
   marker: 'highlight anywhere — it sits under your text',
-  shape: 'drag to draw a shape',
-  sticky: 'click to drop a sticky note',
-  text: 'click anywhere to start a text box there',
+  shape: 'drag to draw a shape in ink',
   eraser: 'drag over ink to rub it out',
 }[id] || '');
 
@@ -147,11 +196,11 @@ function optionsStrip() {
 
 function zoomPill() {
   return h('div.wb-zoom',
-    h('button.wb-zoom-btn', { tip: 'zoom out · ctrl+-', on: { click: async () => (await import('./page.js?v=66fb115653')).setPageZoom((await import('./page.js?v=66fb115653')).pageZoom() * 0.9) } }, icon('minus', { size: 15 })),
-    h('button.wb-zoom-val#wb-zoom-val', { tip: 'back to 100% · ctrl+0', text: '100%', on: { click: async () => (await import('./page.js?v=66fb115653')).resetPageView() } }),
-    h('button.wb-zoom-btn', { tip: 'zoom in · ctrl++', on: { click: async () => (await import('./page.js?v=66fb115653')).setPageZoom((await import('./page.js?v=66fb115653')).pageZoom() * 1.1) } }, icon('plus', { size: 15 })),
+    h('button.wb-zoom-btn', { tip: 'zoom out · ctrl+-', on: { click: async () => (await import('./page.js?v=5aab9d9b3f')).setPageZoom((await import('./page.js?v=5aab9d9b3f')).pageZoom() * 0.9) } }, icon('minus', { size: 15 })),
+    h('button.wb-zoom-val#wb-zoom-val', { tip: 'back to 100% · ctrl+0', text: '100%', on: { click: async () => (await import('./page.js?v=5aab9d9b3f')).resetPageView() } }),
+    h('button.wb-zoom-btn', { tip: 'zoom in · ctrl++', on: { click: async () => (await import('./page.js?v=5aab9d9b3f')).setPageZoom((await import('./page.js?v=5aab9d9b3f')).pageZoom() * 1.1) } }, icon('plus', { size: 15 })),
     h('span.wb-zoom-sep'),
-    h('button.wb-zoom-btn', { tip: 'centre the page · ctrl+0', on: { click: async () => (await import('./page.js?v=66fb115653')).resetPageView() } }, icon('fit', { size: 15 })),
+    h('button.wb-zoom-btn', { tip: 'fit everything on the board on screen', on: { click: async () => (await import('./page.js?v=5aab9d9b3f')).fitBoard() } }, icon('fit', { size: 15 })),
   );
 }
 
@@ -222,11 +271,16 @@ function bindDrawing(viewport) {
     if (tool === 'select' || e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-    const { toPlane } = await import('./page.js?v=66fb115653');
+
+    // before the await: a quick click must not outrun the module import and
+    // lose its own pointerup
+    if (boxTool()) { startDrawShape(e, tool === 'frame' ? 'frame' : null); return; }
+
+    const { toPlane } = await import('./page.js?v=5aab9d9b3f');
     const p = toPlane(e.clientX, e.clientY);
 
     if (tool === 'sticky') { dropSticky(p); return; }
-    if (tool === 'text') { dropText(e); return; }
+    if (tool === 'text') { dropText(p); return; }
     if (tool === 'eraser') { startErase(viewport); return; }
 
     temp = tool === 'shape'
@@ -273,7 +327,7 @@ function startErase(viewport) {
   const cardId = state.cardId;
   const gone = new Set();
   const hit = async (ev) => {
-    const { toPlane } = await import('./page.js?v=66fb115653');
+    const { toPlane } = await import('./page.js?v=5aab9d9b3f');
     const p = toPlane(ev.clientX, ev.clientY);
     for (const s of inkOf()) {
       if (gone.has(s.id)) continue;
@@ -312,17 +366,20 @@ function clearInk() {
   toast(`rubbed out ${n} marks`, { kind: 'ok', action: { label: 'undo', fn: () => { undo(); renderInk(); } } });
 }
 
-/* ---------------------------------------------------------------- stickies + text */
+/* ---------------------------------------------------------------- things on the board
 
-async function dropSticky(p) {
-  const { addStickyAt } = await import('./page.js?v=66fb115653');
-  addStickyAt(p, stickyColour);
+   a sticky note and a text box are both shapes now, so they can be selected
+   with a marquee, lined up with everything else and joined with a line. the
+   old `free[]` boxes still render and still work — they are just not what a
+   new one is made of. */
+
+function dropSticky(p) {
+  addShapeAt(p, { kind: 'sticky', fill: stickyColour, tone: 'solid', align: 'left', valign: 'top' });
   setTool('select');
 }
 
-async function dropText(e) {
-  const { addFreeBox } = await import('./page.js?v=66fb115653');
-  addFreeBox({ x: e.clientX, y: e.clientY });
+function dropText(p) {
+  addShapeAt(p, { kind: 'rect', tone: 'text', align: 'left', valign: 'top', w: 240, h: 60 });
   setTool('select');
 }
 
@@ -333,8 +390,9 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const el = document.activeElement;
   if (el?.isContentEditable || /INPUT|TEXTAREA/.test(el?.tagName || '')) return;
-  const map = { v: 'select', b: 'pen', m: 'marker', r: 'shape', n: 'sticky', x: 'text', e: 'eraser' };
-  const next = map[e.key.toLowerCase()];
+  const key = e.key.toLowerCase();
+  const map = { v: 'select', b: 'pen', m: 'marker', n: 'sticky', x: 'text', e: 'eraser', f: 'frame' };
+  const next = key === 'r' ? (e.shiftKey ? 'shape' : 'box') : map[key];
   if (!next) return;
   e.preventDefault();
   setTool(next);

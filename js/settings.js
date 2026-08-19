@@ -1,11 +1,11 @@
 /* the gear — everything you can change lives here, not in a ribbon. */
 
-import { $, h, clear } from './util.js?v=66fb115653';
-import { icon } from './icons.js?v=66fb115653';
-import { api, isStatic, mode } from './api.js?v=66fb115653';
-import { state, setSetting, bus } from './store.js?v=66fb115653';
-import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from './ui.js?v=66fb115653';
-import { animate, settle, fadeOut, EASE } from './motion.js?v=66fb115653';
+import { $, h, clear } from './util.js?v=5aab9d9b3f';
+import { icon } from './icons.js?v=5aab9d9b3f';
+import { api, isStatic, mode } from './api.js?v=5aab9d9b3f';
+import { state, setSetting, bus } from './store.js?v=5aab9d9b3f';
+import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from './ui.js?v=5aab9d9b3f';
+import { animate, settle, fadeOut, EASE } from './motion.js?v=5aab9d9b3f';
 
 const THEMES = [
   ['graphite', 'graphite', ['#17191c', '#25282c', '#e5484d']],
@@ -69,6 +69,14 @@ export function applySettings(s = state.settings) {
 
   if (s.motionSpeed) root.style.setProperty('--m', String(s.motion === 'off' ? 0.001 : (s.motion === 'subtle' ? 0.62 : 1) / s.motionSpeed));
   document.body.classList.toggle('focus-on', !!s.focusMode);
+
+  // the furniture round the plane. every piece of it can be turned off, and
+  // the page's own chrome (paper, title, meta) is per-page — see page.js.
+  root.style.setProperty('--grid-size', `${s.gridSize || 28}px`);
+  document.body.dataset.grid = s.grid || 'dots';
+  document.body.classList.toggle('no-rail', s.showRail === false);
+  document.body.classList.toggle('no-zoom', s.showZoom === false);
+  document.body.classList.toggle('no-status', s.showStatus === false);
 }
 
 /* ---------------------------------------------------------------- panel */
@@ -106,7 +114,7 @@ function paint(panel, close) {
       h('h2', { text: 'settings' }),
       h('button.icon-btn', { tip: 'close', on: { click: close } }, icon('close', { size: 16 }))),
     h('div.gear-tabs',
-      ...[['appearance', 'appearance'], ['motion', 'motion'], ['editor', 'editor'], ['board', 'map'], ['data', 'data'], ['keys', 'shortcuts']]
+      ...[['appearance', 'appearance'], ['surface', 'surface'], ['motion', 'motion'], ['editor', 'editor'], ['board', 'map'], ['data', 'data'], ['keys', 'shortcuts']]
         .map(([id, label]) => h('button.gear-tab', {
           class: tab === id ? 'on' : '', text: label,
           on: { click: () => { tab = id; paint(panel, close); } },
@@ -120,6 +128,7 @@ function paint(panel, close) {
 function body() {
   const s = state.settings;
   if (tab === 'appearance') return appearanceTab(s);
+  if (tab === 'surface') return surfaceTab(s);
   if (tab === 'motion') return motionTab(s);
   if (tab === 'editor') return editorTab(s);
   if (tab === 'board') return boardTab(s);
@@ -207,6 +216,65 @@ function editorTab(s) {
   );
 }
 
+/* ---------------------------------------------------------------- surface
+
+   what is on screen round the plane, and what is not. everything here can be
+   turned off — including the pieces that used to be permanent. the per-page
+   ones (the paper, the title, the flags row, the sub-page strip) are on the
+   page menu instead, because one session can be a written page and the next a
+   bare board. */
+
+function surfaceTab(s) {
+  const restore = h('div.gear-restore');
+  const paintRestore = () => {
+    clear(restore);
+    Promise.all([import('./presets.js?v=5aab9d9b3f'), import('./templates.js?v=5aab9d9b3f')]).then(([presets, templates]) => {
+      const gone = presets.deletedCount();
+      const goneTpl = templates.hiddenTemplateCount();
+      if (!gone && !goneTpl) {
+        restore.append(h('p.gear-note', { text: 'nothing has been deleted. anything you do delete can be put back here.' }));
+        return;
+      }
+      if (gone) {
+        restore.append(h('button.btn.btn-sm', {
+          on: { click: () => { presets.restorePresets(); paintRestore(); } },
+        }, icon('undo', { size: 13 }), `put back ${gone} built-in picture${gone === 1 ? '' : 's'}`));
+      }
+      if (goneTpl) {
+        restore.append(h('button.btn.btn-sm', {
+          on: { click: () => { templates.restoreTemplates(); paintRestore(); } },
+        }, icon('undo', { size: 13 }), `put back ${goneTpl} template${goneTpl === 1 ? '' : 's'}`));
+      }
+    });
+  };
+  paintRestore();
+
+  return h('div',
+    h('section.gear-section',
+      h('h3', { text: 'what is on screen' }),
+      labelled('the tool rail', toggle('showRail', s.showRail !== false), 'boxes, pen and the rest, down the left'),
+      labelled('the zoom pill', toggle('showZoom', s.showZoom !== false), 'bottom right'),
+      labelled('the status bar', toggle('showStatus', s.showStatus !== false), 'counts and the hint line'),
+      labelled('the left panel', toggle('sidebar', s.sidebar !== false), 'outline, images, tags'),
+      h('p.gear-note', { text: 'the paper, the title, the flags row and the sub-page strip belong to one page rather than to the app — right-click the plane and pick "what this page shows".' }),
+    ),
+    h('section.gear-section',
+      h('h3', { text: 'the plane' }),
+      labelled('background', segmented(
+        [{ value: 'dots', label: 'dots' }, { value: 'lines', label: 'lines' }, { value: 'none', label: 'nothing' }],
+        s.grid || 'dots',
+        (v) => { setSetting('grid', v); applySettings(); })),
+      slider('background size', 'gridSize', s.gridSize || 28, 12, 80, 2, 'px'),
+      labelled('snap boxes to a grid', toggle('gridSnap', s.gridSnap !== false)),
+      slider('snap to', 'snapSize', s.snapSize || 8, 2, 32, 2, 'px'),
+    ),
+    h('section.gear-section',
+      h('h3', { text: 'things you deleted' }),
+      restore,
+    ),
+  );
+}
+
 function boardTab(s) {
   return h('div',
     h('section.gear-section',
@@ -233,9 +301,9 @@ function dataTab() {
     state.board ? h('section.gear-section',
       h('h3', { text: 'export this session' }),
       h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=66fb115653')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=66fb115653')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
-        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=66fb115653')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=5aab9d9b3f')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=5aab9d9b3f')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
+        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=5aab9d9b3f')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
     ) : null,
     h('section.gear-section',
       h('h3', { text: 'server' }),
@@ -250,7 +318,7 @@ function webDataTab() {
   const synced = mode === 'cloud';
   const size = h('p.modal-text', { text: synced ? '' : 'measuring…' });
   if (!synced) {
-    import('./vault.js?v=66fb115653').then(async (v) => {
+    import('./vault.js?v=5aab9d9b3f').then(async (v) => {
       const s = await v.vaultSize();
       size.textContent = `${s.records} sealed records · about ${(s.bytes / 1048576).toFixed(1)} mb, all of it encrypted with your password.`;
     });
@@ -265,7 +333,7 @@ function webDataTab() {
           : `you are ${currentUserName()} on the hosted copy. your notes live in this browser only — they do not follow you to another device.`,
       }),
       size,
-      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./api.js?v=66fb115653')).signOut() } },
+      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./api.js?v=5aab9d9b3f')).signOut() } },
         icon('back', { size: 14 }), 'sign out'),
     ),
     synced ? null : h('section.gear-section',
@@ -278,9 +346,9 @@ function webDataTab() {
     state.board ? h('section.gear-section',
       h('h3', { text: 'export this session' }),
       h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=66fb115653')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=66fb115653')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
-        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=66fb115653')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=5aab9d9b3f')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=5aab9d9b3f')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
+        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=5aab9d9b3f')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
     ) : null,
   );
 }
@@ -290,8 +358,8 @@ function currentUserName() {
 }
 
 async function doBackup() {
-  const v = await import('./vault.js?v=66fb115653');
-  const { download } = await import('./util.js?v=66fb115653');
+  const v = await import('./vault.js?v=5aab9d9b3f');
+  const { download } = await import('./util.js?v=5aab9d9b3f');
   const vault = await v.exportVault();
   download(`vodpad-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(vault), 'application/json');
   toast('backup saved to downloads — it is encrypted', { kind: 'ok' });
@@ -305,7 +373,7 @@ async function doRestore() {
     input.remove();
     if (!file) return;
     try {
-      const v = await import('./vault.js?v=66fb115653');
+      const v = await import('./vault.js?v=5aab9d9b3f');
       const n = await v.importVault(file);
       toast(`restored ${n} records — reloading`, { kind: 'ok' });
       setTimeout(() => location.reload(), 900);
@@ -332,7 +400,7 @@ function keysTab() {
     ['ctrl + e', 'inline code'],
     ['ctrl + l', 'link this line to a picture'],
     ['ctrl + m', 'note in the margin'],
-    ['ctrl + shift + t', 'floating text box'],
+    ['ctrl + shift + t', 'a text box on the plane'],
     ['ctrl + v', 'paste a screenshot in'],
     ['1 … 4', 'flag the page (none → costs me games)'],
     ['tab / shift + tab', 'indent, outdent'],
@@ -344,6 +412,21 @@ function keysTab() {
     ['t', 'with the vod open: a new note stamped at this moment'],
     ['s', 'with the vod open: grab this frame'],
     ['shift + s', 'with the vod open: pick from the frames either side'],
+    ['dbl-click', 'on the open plane: a box, ready to type in'],
+    ['r / shift + r', 'the box tool / draw a shape in ink'],
+    ['n / x / f', 'sticky note / text / frame'],
+    ['c', 'join two things with a line'],
+    ['drag a dot', 'with a box selected: draw a line out of it'],
+    ['let go over nothing', 'while drawing a line: the next box, joined on'],
+    ['tab', 'with a box selected: the next box, joined on'],
+    ['shift + drag', 'on the open plane: select several boxes'],
+    ['alt + drag', 'a box: drag a copy of it out'],
+    ['shift + drag', 'a box: keep it on one axis'],
+    ['arrows', 'with a box selected: nudge it (shift: further)'],
+    ['ctrl + a', 'with a box selected: select every box'],
+    ['ctrl + c / v / x', 'copy, paste, cut boxes'],
+    ['ctrl + [ / ctrl + ]', 'send a box back / bring it to the front'],
+    ['del', 'delete the selected boxes'],
     ['dbl-click', 'on the map: a new card you can type on'],
     ['tab', 'on the map: branch a card off the selected one'],
     ['alt + drag', 'on the map: drop a card inside another'],

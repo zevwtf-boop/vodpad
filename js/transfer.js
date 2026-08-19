@@ -7,11 +7,11 @@
    aren't using sync.
 */
 
-import { h, download, stripHtml } from './util.js?v=66fb115653';
-import { api, mediaUrl, mode } from './api.js?v=66fb115653';
-import { state, refreshBoards, cardTitle } from './store.js?v=66fb115653';
-import { toast, openModal } from './ui.js?v=66fb115653';
-import { icon } from './icons.js?v=66fb115653';
+import { h, download, stripHtml } from './util.js?v=5aab9d9b3f';
+import { api, mediaUrl, mode } from './api.js?v=5aab9d9b3f';
+import { state, refreshBoards, cardTitle } from './store.js?v=5aab9d9b3f';
+import { toast, openModal } from './ui.js?v=5aab9d9b3f';
+import { icon } from './icons.js?v=5aab9d9b3f';
 
 const KIND = 'vodpad-session';
 
@@ -20,9 +20,13 @@ const KIND = 'vodpad-session';
 function mediaNamesIn(doc) {
   const names = new Set();
   for (const card of Object.values(doc.cards || {})) {
+    const real = (src) => src && !/^(data:|https?:|blob:)/.test(src);
     for (const block of card.blocks || []) {
-      if (block.type === 'image' && block.src) names.add(String(block.src));
+      if (block.type === 'image' && real(block.src)) names.add(String(block.src));
     }
+    // a preset picture is already inside the document as a data: url, so it
+    // travels with the json and needs no bundling
+    for (const shape of card.shapes || []) if (real(shape.src)) names.add(String(shape.src));
   }
   return [...names];
 }
@@ -112,6 +116,9 @@ export async function importSessionFile(file) {
   for (const card of Object.values(doc.cards)) {
     for (const block of card.blocks || []) {
       if (block.type === 'image' && block.src && remap[block.src]) block.src = remap[block.src];
+    }
+    for (const shape of card.shapes || []) {
+      if (shape.src && remap[shape.src]) shape.src = remap[shape.src];
     }
   }
   await api.saveBoard(newId, doc);
