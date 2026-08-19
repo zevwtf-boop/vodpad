@@ -1,10 +1,10 @@
 /* router + top bar chrome. three surfaces, one history stack. */
 
-import { $, $$, h, clear } from './util.js?v=764fd7e397';
-import { icon } from './icons.js?v=764fd7e397';
-import { state, bus, openBoard, closeBoard, saveNow, pathTo, cardTitle, card, forceSave } from './store.js?v=764fd7e397';
-import { ghostTo } from './motion.js?v=764fd7e397';
-import { toast, openModal } from './ui.js?v=764fd7e397';
+import { $, $$, h, clear } from './util.js?v=66fb115653';
+import { icon } from './icons.js?v=66fb115653';
+import { state, bus, openBoard, closeBoard, saveNow, pathTo, cardTitle, card, forceSave } from './store.js?v=66fb115653';
+import { ghostTo } from './motion.js?v=66fb115653';
+import { toast, openModal } from './ui.js?v=66fb115653';
 
 const SURFACE = { dash: '#surface-dash', board: '#surface-board', page: '#surface-page' };
 const mounts = {};
@@ -183,7 +183,7 @@ bus.on('conflict', async () => {
 
     if (pick === 'history') {
       // looking does not resolve the clash, so leave the door open to come back
-      await (await import('./history.js?v=764fd7e397')).openHistory();
+      await (await import('./history.js?v=66fb115653')).openHistory();
       askingAboutClash = false;
       bus.emit('conflict', {});
       return;

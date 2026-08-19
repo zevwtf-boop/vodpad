@@ -19,19 +19,23 @@
 @font-face { font-family: 'JetBrains Mono'; src: url('../fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 
 :root {
-  /* --- surfaces (carbon, the default: neutral charcoal, no colour cast) --- */
-  --bg-0: #0d0d0f;
-  --bg-1: #131316;
-  --bg-2: #191a1d;
-  --bg-3: #212226;
-  --bg-4: #2c2d32;
-  --line: #2a2b31;
-  --line-soft: #1f2024;
+  /* --- surfaces -------------------------------------------------------
+     graphite: one hue (215deg), almost no saturation, and *even* lightness
+     steps. the old palette jumped from #0d0d0f to #2c2d32 in five uneven
+     hops, which is what made panels read as separate slabs stacked on a
+     black hole. even steps make the depth read as one smooth material.  */
+  --bg-0: #17191c;   /* the floor everything sits on */
+  --bg-1: #1e2024;   /* panels, rails, the top bar */
+  --bg-2: #25282c;   /* cards and rows on a panel */
+  --bg-3: #2f3238;   /* hover */
+  --bg-4: #3d4149;   /* pressed / selected */
+  --line: #383c43;
+  --line-soft: #2a2d32;
 
-  /* --- ink --- */
-  --text: #eceef1;
-  --muted: #9b9da5;
-  --faint: #6c6e77;
+  /* --- ink: three weights, each a real step apart --- */
+  --text: #e8ebef;
+  --muted: #a4abb3;
+  --faint: #717880;
 
   /* --- accent family --- */
   --accent: #e5484d;
@@ -40,17 +44,18 @@
   --accent-ink: #ffffff;       /* text sitting on top of a solid accent */
 
   /* --- severity / "harder things" --- */
-  --sev-1: #e6a23c;
+  --sev-1: #e0a13d;
   --sev-2: #e5484d;
-  --sev-3: #3aa981;
+  --sev-3: #45b08a;
 
-  /* --- paper (the doc surface) --- */
-  --paper: #131316;
-  --paper-edge: #26272c;
+  /* --- paper (the doc surface) — deliberately lifted off the app floor so
+         the thing you read is the brightest surface on screen --- */
+  --paper: #22252a;
+  --paper-edge: #33373e;
 
   /* --- shadow: one neutral colour, four depths. themes tune the alphas --- */
   --shade: 0 0 0;
-  --sh1: .30; --sh2: .36; --sh3: .46; --sh4: .40;
+  --sh1: .22; --sh2: .28; --sh3: .38; --sh4: .32;
 
   /* --- derived --- */
   --glow: color-mix(in srgb, var(--accent) 13%, transparent);
@@ -69,16 +74,26 @@
   --pad: 16px;
   --row: 32px;
 
-  /* --- type --- */
+  /* --- type ------------------------------------------------------------
+     one scale, used everywhere, instead of the thirty-odd hand-picked px
+     values that were scattered through the css. --t-0 is running text.   */
   --font-ui: Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-doc: var(--font-ui);
   --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
   --font-serif: "Source Serif 4", Georgia, "Iowan Old Style", serif;
   --text-size: 16px;
-  --line-height: 1.65;
-  --page-width: 76ch;
+  --line-height: 1.7;
+  --page-width: 72ch;
   --track-tight: -0.021em;   /* headings */
   --track-body: -0.008em;    /* running text */
+
+  --t--2: 10.5px;   /* eyebrows, counts */
+  --t--1: 11.5px;   /* captions, meta */
+  --t-0:  13px;     /* ui running text */
+  --t-1:  15px;     /* emphasis, section heads */
+  --t-2:  18px;     /* panel titles */
+  --t-3:  24px;     /* page titles */
+  --t-4:  32px;     /* the one big number */
 
   /* --- motion vocabulary --- */
   --m: 1;
@@ -93,46 +108,49 @@
   color-scheme: dark;
 }
 
-/* ---------------- theme presets ----------------
+/* ---------------- themes ----------------
 
-   the first four are the quiet ones: neutral surfaces, one restrained accent,
-   nothing glowing. everything below them is deliberately loud and was asked
-   for by name — leave those alone.                                            */
+   four, down from fifteen. the twelve that went were near-duplicates of each
+   other (five shades of dark purple) and the five "cheat menu" ones, which
+   were asked for in the first build and are the opposite of where this ended
+   up. the accent picker below covers recolouring without a theme each.        */
 
 /* the default, spelled out so picking it in settings works like any other */
-:root[data-theme="carbon"] {
-  --bg-0: #0d0d0f; --bg-1: #131316; --bg-2: #191a1d; --bg-3: #212226; --bg-4: #2c2d32;
-  --line: #2a2b31; --line-soft: #1f2024;
-  --text: #eceef1; --muted: #9b9da5; --faint: #6c6e77;
+:root[data-theme="graphite"] {
+  --bg-0: #17191c; --bg-1: #1e2024; --bg-2: #25282c; --bg-3: #2f3238; --bg-4: #3d4149;
+  --line: #383c43; --line-soft: #2a2d32;
+  --text: #e8ebef; --muted: #a4abb3; --faint: #717880;
   --accent: #e5484d; --accent-dim: #b7373c; --accent-deep: #7c2327; --accent-ink: #ffffff;
-  --sev-1: #e6a23c; --sev-2: #e5484d; --sev-3: #3aa981;
-  --paper: #131316; --paper-edge: #26272c;
+  --sev-1: #e0a13d; --sev-2: #e5484d; --sev-3: #45b08a;
+  --paper: #22252a; --paper-edge: #33373e;
 }
 
-/* the same idea, one degree warmer — this is the red/black one */
-:root[data-theme="ember"] {
-  --bg-0: #0e0c0c; --bg-1: #141212; --bg-2: #1a1817; --bg-3: #232120; --bg-4: #2e2b2a;
-  --line: #2d2928; --line-soft: #211e1e;
-  --text: #f0ecea; --muted: #a29b98; --faint: #726b69;
-  --accent: #e5484d; --accent-dim: #b7373c; --accent-deep: #7c2327; --accent-ink: #ffffff;
-  --sev-1: #e0a13d; --sev-2: #e5484d; --sev-3: #3ca884;
-  --paper: #141211; --paper-edge: #2a2726;
+/* the same ramp, shifted up. for a bright room — still grey, not white */
+:root[data-theme="fog"] {
+  --bg-0: #2a2d31; --bg-1: #32363b; --bg-2: #3b3f45; --bg-3: #464b52; --bg-4: #555b64;
+  --line: #4e545b; --line-soft: #3a3e44;
+  --text: #f1f3f5; --muted: #b7bdc4; --faint: #868d95;
+  --accent: #ef5b60; --accent-dim: #c04247; --accent-deep: #8a2b2f; --accent-ink: #ffffff;
+  --sev-1: #e8ad4c; --sev-2: #ef5b60; --sev-3: #4fbe97;
+  --paper: #383c42; --paper-edge: #4a4f57;
+  --sh1: .18; --sh2: .24; --sh3: .32; --sh4: .28;
 }
 
-/* cool neutral, blue-grey — the most "office" of the set */
-:root[data-theme="slate"] {
-  --bg-0: #0c0e12; --bg-1: #12151b; --bg-2: #171b22; --bg-3: #1f242d; --bg-4: #2a303b;
-  --line: #272d37; --line-soft: #1c2028;
-  --text: #e8ecf2; --muted: #949cab; --faint: #68707e;
-  --accent: #5b8dee; --accent-dim: #3f6cc4; --accent-deep: #274a8c; --accent-ink: #ffffff;
-  --sev-1: #d99b3c; --sev-2: #e15b62; --sev-3: #3ba888;
-  --paper: #12151b; --paper-edge: #242a34;
+/* near-black, for a dark room and oled panels */
+:root[data-theme="ink"] {
+  --bg-0: #0b0c0d; --bg-1: #111214; --bg-2: #17191b; --bg-3: #1f2124; --bg-4: #2b2e32;
+  --line: #292c30; --line-soft: #1b1d20;
+  --text: #eef0f2; --muted: #9aa0a7; --faint: #676d74;
+  --accent: #e5484d; --accent-dim: #b7373c; --accent-deep: #7c2327; --accent-ink: #ffffff;
+  --sev-1: #e0a13d; --sev-2: #e5484d; --sev-3: #45b08a;
+  --paper: #141618; --paper-edge: #24272b;
+  --sh1: .4; --sh2: .48; --sh3: .58; --sh4: .5;
 }
 
 /* daylight — the light one. same shapes, inverted surfaces, softer shadows */
 :root[data-theme="daylight"] {
-  --bg-0: #f6f7f8; --bg-1: #ffffff; --bg-2: #ffffff; --bg-3: #f0f1f3; --bg-4: #e3e5e9;
-  --line: #e0e2e7; --line-soft: #ebedf0;
+  --bg-0: #eceef0; --bg-1: #f7f8f9; --bg-2: #ffffff; --bg-3: #f0f2f4; --bg-4: #e2e5e9;
+  --line: #dcdfe4; --line-soft: #e8eaee;
   --text: #14161a; --muted: #5c6069; --faint: #888d97;
   /* accent-deep stays dark even here — white text sits on it (selected segments, switches) */
   --accent: #cf3239; --accent-dim: #a9262d; --accent-deep: #8a2026; --accent-ink: #ffffff;
@@ -141,105 +159,6 @@
   --shade: 22 24 30;
   --sh1: .07; --sh2: .09; --sh3: .14; --sh4: .12;
   color-scheme: light;
-}
-
-/* the original default, kept because it was in the picker */
-:root[data-theme="night-lilac"] {
-  --bg-0: #0b0714; --bg-1: #150c26; --bg-2: #1e1235; --bg-3: #2a1a4a; --bg-4: #34215c;
-  --line: #3a2560; --line-soft: #281a45;
-  --text: #ece6f7; --muted: #9d90b8; --faint: #6f6490;
-  --accent: #c9a7ff; --accent-dim: #8f6fd0; --accent-deep: #5b2fa8; --accent-ink: #14082a;
-  --sev-1: #ffb454; --sev-2: #ff6b8a; --sev-3: #6ee7c0;
-  --paper: #150d27; --paper-edge: #2b1c4c;
-}
-
-:root[data-theme="ash"] {
-  --bg-0: #08080a; --bg-1: #101012; --bg-2: #17171a; --bg-3: #222226; --bg-4: #2e2e34;
-  --line: #33333a; --line-soft: #222226;
-  --text: #f0eef0; --muted: #9b9598; --faint: #6d686b;
-  --accent: #ff3b46; --accent-dim: #b82b34; --accent-deep: #7c1a20; --accent-ink: #14090a;
-  --sev-1: #ffc357; --sev-2: #ff8a3d; --sev-3: #4fd1a5;
-  --paper: #121214; --paper-edge: #292930;
-}
-
-/* --- the hud / cheat-menu family: one hot colour, everything else near-black --- */
-
-:root[data-theme="aimbot"] {
-  --bg-0: #040706; --bg-1: #0a1210; --bg-2: #0f1a16; --bg-3: #17271f; --bg-4: #1f342a;
-  --line: #1e3a2c; --line-soft: #142219;
-  --text: #e9fff4; --muted: #8fb6a3; --faint: #628572;
-  --accent: #39ff9e; --accent-dim: #23b06d; --accent-deep: #0d6b41; --accent-ink: #03150c;
-  --sev-1: #ffe34d; --sev-2: #ff4f6d; --sev-3: #4de3ff;
-  --paper: #08100d; --paper-edge: #1b3227;
-}
-
-:root[data-theme="esp"] {
-  --bg-0: #03060c; --bg-1: #081320; --bg-2: #0c1a2b; --bg-3: #142a42; --bg-4: #1c3a58;
-  --line: #1d3e5e; --line-soft: #112436;
-  --text: #e6f7ff; --muted: #8bb2cc; --faint: #5d8299;
-  --accent: #00e5ff; --accent-dim: #049fb4; --accent-deep: #06596b; --accent-ink: #001318;
-  --sev-1: #ffcc33; --sev-2: #ff3d81; --sev-3: #52ff9a;
-  --paper: #07131f; --paper-edge: #17334c;
-}
-
-:root[data-theme="chams"] {
-  --bg-0: #08040e; --bg-1: #120a1e; --bg-2: #1a0f2b; --bg-3: #281844; --bg-4: #362159;
-  --line: #3d2263; --line-soft: #241239;
-  --text: #f8e9ff; --muted: #b394cc; --faint: #806699;
-  --accent: #ff2fd6; --accent-dim: #b81f9c; --accent-deep: #6c1160; --accent-ink: #16021a;
-  --sev-1: #ffd24d; --sev-2: #ff5252; --sev-3: #46f5c8;
-  --paper: #120a1f; --paper-edge: #2d1a49;
-}
-
-:root[data-theme="tracer"] {
-  --bg-0: #0a0603; --bg-1: #150c05; --bg-2: #1e1109; --bg-3: #2e1c0e; --bg-4: #3d2713;
-  --line: #472c14; --line-soft: #2b1a0c;
-  --text: #fff1e2; --muted: #c0a186; --faint: #8d735d;
-  --accent: #ff8a00; --accent-dim: #c26800; --accent-deep: #7d3f00; --accent-ink: #180a00;
-  --sev-1: #ffd93d; --sev-2: #ff4242; --sev-3: #57e08a;
-  --paper: #150d06; --paper-edge: #38230f;
-}
-
-:root[data-theme="wallhack"] {
-  --bg-0: #04060f; --bg-1: #0a0f1f; --bg-2: #0f162c; --bg-3: #182243; --bg-4: #212e5a;
-  --line: #24325f; --line-soft: #151d38;
-  --text: #e8ecff; --muted: #9aa6d6; --faint: #6b76a3;
-  --accent: #4d7cff; --accent-dim: #3457c4; --accent-deep: #1c2f7a; --accent-ink: #030718;
-  --sev-1: #ffc94d; --sev-2: #ff5470; --sev-3: #4ce0b3;
-  --paper: #0a0f22; --paper-edge: #1d2850;
-}
-
-:root[data-theme="deep-plum"] {
-  --bg-0: #120818; --bg-1: #1d0e28; --bg-2: #281337; --bg-3: #351a48; --bg-4: #422159;
-  --line: #4a2464; --line-soft: #331845;
-  --text: #f3e9fb; --muted: #ab93bd; --faint: #7b6489;
-  --accent: #dba7ff; --accent-dim: #a071c6; --accent-deep: #71309e; --accent-ink: #1c0a26;
-  --paper: #1c0f28; --paper-edge: #3a1e4f;
-}
-
-:root[data-theme="midnight"] {
-  --bg-0: #080b18; --bg-1: #101529; --bg-2: #171d36; --bg-3: #202949; --bg-4: #2a355c;
-  --line: #2c375e; --line-soft: #1e2545;
-  --text: #e6ebfa; --muted: #8e99bd; --faint: #626d91;
-  --accent: #a9b8ff; --accent-dim: #7787d6; --accent-deep: #3b46a8; --accent-ink: #080c1f;
-  --paper: #111730; --paper-edge: #232c50;
-}
-
-:root[data-theme="obsidian"] {
-  --bg-0: #0a0a0d; --bg-1: #121216; --bg-2: #18181e; --bg-3: #222229; --bg-4: #2c2c35;
-  --line: #2e2e38; --line-soft: #212128;
-  --text: #ececf1; --muted: #94949f; --faint: #6a6a75;
-  --accent: #c9a7ff; --accent-dim: #9077c0; --accent-deep: #5a3b93; --accent-ink: #0d0a14;
-  --paper: #141419; --paper-edge: #26262f;
-}
-
-:root[data-theme="nocturne"] {
-  --bg-0: #100813; --bg-1: #1c0f21; --bg-2: #26152d; --bg-3: #341d3e; --bg-4: #43264f;
-  --line: #4a2a55; --line-soft: #321c3b;
-  --text: #f6e9f4; --muted: #b394ac; --faint: #83687d;
-  --accent: #ff9ecf; --accent-dim: #c86fa2; --accent-deep: #8f3268; --accent-ink: #21091a;
-  --sev-3: #7fe3c8;
-  --paper: #1e1023; --paper-edge: #3c2246;
 }
 
 /* ---------------- motion levels ---------------- */

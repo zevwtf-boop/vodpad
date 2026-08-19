@@ -12,7 +12,7 @@
    installed something on your machine.
 */
 
-import { mediaNamesOf } from './api.js?v=764fd7e397';
+import { mediaNamesOf } from './api.js?v=66fb115653';
 
 const DB_NAME = 'vodpad-web';
 const STORE = 'kv';
@@ -20,8 +20,8 @@ const ITERATIONS = 600000;
 
 /* same starting point as the desktop build */
 const DEFAULT_SETTINGS = {
-  theme: 'ember', accent: '', font: 'sans', textSize: 16, lineHeight: 1.65,
-  pageWidth: 76, density: 'comfortable', radius: 14, motion: 'full', motionSpeed: 1,
+  theme: 'graphite', accent: '', font: 'sans', textSize: 16, lineHeight: 1.7,
+  pageWidth: 72, density: 'comfortable', radius: 14, motion: 'full', motionSpeed: 1,
   spellcheck: true, markdownShortcuts: true, autosaveMs: 400,
   gridSnap: true, snapSize: 8, lodThreshold: 0.42, sidebar: true, focusMode: false,
 };
@@ -375,7 +375,7 @@ export const localApi = {
   videos: async () => ({ roots: [], files: [], local: true }),
   // same as cloud: nothing local to cache into, so the api url goes straight
   // into the <img> and the browser cache does the work
-  lootmap: async () => (await import('./api.js?v=764fd7e397')).fetchIslandDirect(),
+  lootmap: async () => (await import('./api.js?v=66fb115653')).fetchIslandDirect(),
   reveal: async () => ({ ok: false }),
   quit: async () => ({ ok: false }),
 
@@ -437,7 +437,7 @@ export function localMediaUrl(boardId, src) {
 }
 
 // hand the resolver to api.js so mediaUrl() stays synchronous everywhere else
-import('./api.js?v=764fd7e397').then((m) => m.registerStaticMedia(localMediaUrl));
+import('./api.js?v=66fb115653').then((m) => m.registerStaticMedia(localMediaUrl));
 
 /* ---------------------------------------------------------------- backups
 

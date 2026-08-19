@@ -5,13 +5,13 @@
    editable, and it is what notion/craft do too.
 */
 
-import { h, $, $$, uid, clamp, stripHtml, sanitizeInline, modKey, debounce } from './util.js?v=764fd7e397';
-import { icon } from './icons.js?v=764fd7e397';
-import { state, card, commit, quietly, syncTags, bus, undo } from './store.js?v=764fd7e397';
-import { contextMenu, toast } from './ui.js?v=764fd7e397';
-import { animate, EASE } from './motion.js?v=764fd7e397';
-import { renderImageBlock } from './images.js?v=764fd7e397';
-import { openSlashMenu, closeSlashMenu, slashOpen } from './toolbar.js?v=764fd7e397';
+import { h, $, $$, uid, clamp, stripHtml, sanitizeInline, modKey, debounce } from './util.js?v=66fb115653';
+import { icon } from './icons.js?v=66fb115653';
+import { state, card, commit, quietly, syncTags, bus, undo } from './store.js?v=66fb115653';
+import { contextMenu, toast } from './ui.js?v=66fb115653';
+import { animate, EASE } from './motion.js?v=66fb115653';
+import { renderImageBlock } from './images.js?v=66fb115653';
+import { openSlashMenu, closeSlashMenu, slashOpen } from './toolbar.js?v=66fb115653';
 
 export const TEXT_TYPES = new Set(['p', 'h1', 'h2', 'h3', 'quote', 'callout', 'ul', 'ol', 'todo']);
 export const LIST_TYPES = new Set(['ul', 'ol', 'todo']);
@@ -151,7 +151,7 @@ function subPageEl(block) {
   return h('button.subpage-block', {
     on: {
       click: async (e) => {
-        const { openCardPage } = await import('./nav.js?v=764fd7e397');
+        const { openCardPage } = await import('./nav.js?v=66fb115653');
         openCardPage(kid.id, e.currentTarget);
       },
     },
@@ -393,6 +393,11 @@ export function insertBlock(afterId, patch = {}, focus = true) {
   return block;
 }
 
+/** blocks can be an end of a wire; dropping one has to tidy those up */
+async function tidyWires() {
+  try { (await import('./wires.js?v=66fb115653')).pruneWires(); } catch { /* no wires module, fine */ }
+}
+
 export function deleteBlock(id, { focusPrev = true } = {}) {
   const list = blocksOf();
   if (list.length <= 1) {
@@ -410,6 +415,7 @@ export function deleteBlock(id, { focusPrev = true } = {}) {
   });
   blockElById(id)?.remove();
   renumber();
+  tidyWires();
   const target = focusPrev ? prev || next : next || prev;
   if (target) focusBlock(target.id, focusPrev ? 'end' : 'start');
 }
@@ -844,7 +850,7 @@ async function onPaste(e, body, blockId) {
   if (imageItem) {
     e.preventDefault();
     const file = imageItem.getAsFile();
-    const { insertImageFromFile } = await import('./images.js?v=764fd7e397');
+    const { insertImageFromFile } = await import('./images.js?v=66fb115653');
     insertImageFromFile(file, blockId);
     return;
   }

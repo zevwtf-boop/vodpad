@@ -1,11 +1,11 @@
 /* turning a page (and everything nested under it) into a clean document —
    used by read mode, by markdown/html export, and by print-to-pdf. */
 
-import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=764fd7e397';
-import { mediaUrl } from './api.js?v=764fd7e397';
-import { state, card, childrenOf, cardTitle } from './store.js?v=764fd7e397';
-import { paintStrokes } from './images.js?v=764fd7e397';
-import { toast } from './ui.js?v=764fd7e397';
+import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=66fb115653';
+import { mediaUrl } from './api.js?v=66fb115653';
+import { state, card, childrenOf, cardTitle } from './store.js?v=66fb115653';
+import { paintStrokes } from './images.js?v=66fb115653';
+import { toast } from './ui.js?v=66fb115653';
 
 /* ---------------------------------------------------------------- dom render */
 
@@ -213,7 +213,7 @@ function mdInline(html) {
 */
 
 export async function exportClipList(doc, { csv = false } = {}) {
-  const { stampsInDoc, clipCsv, clipLines } = await import('./stamps.js?v=764fd7e397');
+  const { stampsInDoc, clipCsv, clipLines } = await import('./stamps.js?v=66fb115653');
   const rows = stampsInDoc(doc);
 
   if (!rows.length) {

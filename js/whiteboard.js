@@ -6,11 +6,11 @@
    your text.
 */
 
-import { $, $$, h, clear, uid, clamp, debounce } from './util.js?v=764fd7e397';
-import { icon } from './icons.js?v=764fd7e397';
-import { state, card, commit, quietly, bus, undo, redo, canUndo, canRedo } from './store.js?v=764fd7e397';
-import { toast, contextMenu } from './ui.js?v=764fd7e397';
-import { animate, popIn, EASE } from './motion.js?v=764fd7e397';
+import { $, $$, h, clear, uid, clamp, debounce } from './util.js?v=66fb115653';
+import { icon } from './icons.js?v=66fb115653';
+import { state, card, commit, quietly, bus, undo, redo, canUndo, canRedo } from './store.js?v=66fb115653';
+import { toast, contextMenu } from './ui.js?v=66fb115653';
+import { animate, popIn, EASE } from './motion.js?v=66fb115653';
 
 export const PEN_COLOURS = [
   ['chalk', 'var(--text)'],
@@ -123,7 +123,7 @@ function rail() {
 
 async function pickTool(id) {
   if (id === 'picture') {
-    const { pickImageFile } = await import('./images.js?v=764fd7e397');
+    const { pickImageFile } = await import('./images.js?v=66fb115653');
     const blocks = card(state.cardId)?.blocks || [];
     pickImageFile(blocks.at(-1)?.id);
     return;
@@ -147,11 +147,11 @@ function optionsStrip() {
 
 function zoomPill() {
   return h('div.wb-zoom',
-    h('button.wb-zoom-btn', { tip: 'zoom out · ctrl+-', on: { click: async () => (await import('./page.js?v=764fd7e397')).setPageZoom((await import('./page.js?v=764fd7e397')).pageZoom() * 0.9) } }, icon('minus', { size: 15 })),
-    h('button.wb-zoom-val#wb-zoom-val', { tip: 'back to 100% · ctrl+0', text: '100%', on: { click: async () => (await import('./page.js?v=764fd7e397')).resetPageView() } }),
-    h('button.wb-zoom-btn', { tip: 'zoom in · ctrl++', on: { click: async () => (await import('./page.js?v=764fd7e397')).setPageZoom((await import('./page.js?v=764fd7e397')).pageZoom() * 1.1) } }, icon('plus', { size: 15 })),
+    h('button.wb-zoom-btn', { tip: 'zoom out · ctrl+-', on: { click: async () => (await import('./page.js?v=66fb115653')).setPageZoom((await import('./page.js?v=66fb115653')).pageZoom() * 0.9) } }, icon('minus', { size: 15 })),
+    h('button.wb-zoom-val#wb-zoom-val', { tip: 'back to 100% · ctrl+0', text: '100%', on: { click: async () => (await import('./page.js?v=66fb115653')).resetPageView() } }),
+    h('button.wb-zoom-btn', { tip: 'zoom in · ctrl++', on: { click: async () => (await import('./page.js?v=66fb115653')).setPageZoom((await import('./page.js?v=66fb115653')).pageZoom() * 1.1) } }, icon('plus', { size: 15 })),
     h('span.wb-zoom-sep'),
-    h('button.wb-zoom-btn', { tip: 'centre the page · ctrl+0', on: { click: async () => (await import('./page.js?v=764fd7e397')).resetPageView() } }, icon('fit', { size: 15 })),
+    h('button.wb-zoom-btn', { tip: 'centre the page · ctrl+0', on: { click: async () => (await import('./page.js?v=66fb115653')).resetPageView() } }, icon('fit', { size: 15 })),
   );
 }
 
@@ -222,7 +222,7 @@ function bindDrawing(viewport) {
     if (tool === 'select' || e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-    const { toPlane } = await import('./page.js?v=764fd7e397');
+    const { toPlane } = await import('./page.js?v=66fb115653');
     const p = toPlane(e.clientX, e.clientY);
 
     if (tool === 'sticky') { dropSticky(p); return; }
@@ -273,7 +273,7 @@ function startErase(viewport) {
   const cardId = state.cardId;
   const gone = new Set();
   const hit = async (ev) => {
-    const { toPlane } = await import('./page.js?v=764fd7e397');
+    const { toPlane } = await import('./page.js?v=66fb115653');
     const p = toPlane(ev.clientX, ev.clientY);
     for (const s of inkOf()) {
       if (gone.has(s.id)) continue;
@@ -315,13 +315,13 @@ function clearInk() {
 /* ---------------------------------------------------------------- stickies + text */
 
 async function dropSticky(p) {
-  const { addStickyAt } = await import('./page.js?v=764fd7e397');
+  const { addStickyAt } = await import('./page.js?v=66fb115653');
   addStickyAt(p, stickyColour);
   setTool('select');
 }
 
 async function dropText(e) {
-  const { addFreeBox } = await import('./page.js?v=764fd7e397');
+  const { addFreeBox } = await import('./page.js?v=66fb115653');
   addFreeBox({ x: e.clientX, y: e.clientY });
   setTool('select');
 }

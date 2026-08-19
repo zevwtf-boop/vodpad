@@ -2,19 +2,20 @@
    a main column, a margin gutter for side notes, and a free layer you can
    drop text anywhere on. */
 
-import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=764fd7e397';
-import { icon } from './icons.js?v=764fd7e397';
-import { mediaUrl } from './api.js?v=764fd7e397';
-import { stampsOnCard, tidy, clipLines } from './stamps.js?v=764fd7e397';
-import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting, SEV_LABEL, SEV_ORDER } from './store.js?v=764fd7e397';
-import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=764fd7e397';
-import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=764fd7e397';
-import { initSelectionToolbar } from './toolbar.js?v=764fd7e397';
-import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=764fd7e397';
-import { stagger, animate, ping, EASE } from './motion.js?v=764fd7e397';
-import { paintAnchors } from './anchors.js?v=764fd7e397';
-import { mountVideoPanel } from './video.js?v=764fd7e397';
-import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=764fd7e397';
+import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=66fb115653';
+import { icon } from './icons.js?v=66fb115653';
+import { mediaUrl } from './api.js?v=66fb115653';
+import { stampsOnCard, tidy, clipLines } from './stamps.js?v=66fb115653';
+import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting, SEV_LABEL, SEV_ORDER } from './store.js?v=66fb115653';
+import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=66fb115653';
+import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=66fb115653';
+import { initSelectionToolbar } from './toolbar.js?v=66fb115653';
+import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=66fb115653';
+import { stagger, animate, ping, EASE } from './motion.js?v=66fb115653';
+import { paintAnchors } from './anchors.js?v=66fb115653';
+import { paintWires, startWire, cancelWire, wiring } from './wires.js?v=66fb115653';
+import { mountVideoPanel } from './video.js?v=66fb115653';
+import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=66fb115653';
 
 let host = null;
 let sheet = null;
@@ -31,7 +32,7 @@ registerSurface('page', {
 
 bus.on('replace', () => { if (host) render(); });
 bus.on('page:tags', () => paintMeta());
-bus.on('page:reflow', rafThrottle(() => { layoutSidenotes(); paintAnchors(); }));
+bus.on('page:reflow', rafThrottle(() => { layoutSidenotes(); paintAnchors(); paintWires(); }));
 
 export const pageSheet = () => sheet;
 
@@ -182,7 +183,7 @@ export function toPlane(clientX, clientY) {
 function statusBar() {
   return h('div.page-status#page-status',
     h('div.status-left',
-      h('span.status-hint', { text: 'drag the background or hold space to pan · ctrl+wheel to zoom · v select, b pen, m marker, n note' })),
+      h('span.status-hint', { text: 'drag the background or hold space to pan · ctrl+wheel to zoom · c draws a line · v select, b pen, m marker, n note' })),
     h('div.status-right#status-right'));
 }
 
@@ -235,7 +236,7 @@ export function render() {
 
   // free layer + connectors live on the plane, not inside the paper — that is
   // what lets a line of text be dragged off into open space and stay there
-  plane.append(sheet, h('div.page-free#page-free'), svgLayer());
+  plane.append(sheet, h('div.page-free#page-free'), svgLayer(), wireLayer());
   viewport.append(plane);
   work.append(viewport, statusBar());
   shell.append(sideBar(), work);
@@ -255,12 +256,14 @@ export function render() {
 
   layoutSidenotes();
   paintAnchors();
+  paintWires();
   paintStatus();
   requestAnimationFrame(() => {
     stagger($$('.blk', sheet).slice(0, 12), { step: 18, distance: 8 });
     if (!c.pageView) { view = centredView(); applyView(); }
     layoutSidenotes();
     paintAnchors();
+    paintWires();
   });
 
   sheet.addEventListener('click', (e) => {
@@ -277,6 +280,15 @@ function svgLayer() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'page-links');
   svg.id = 'page-links';
+  return svg;
+}
+
+/* wires live on their own layer above the anchor hints: anchors clear
+   themselves constantly as you move the mouse, and these must not go with them */
+function wireLayer() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'page-wires');
+  svg.id = 'page-wires';
   return svg;
 }
 
@@ -411,7 +423,7 @@ function paintShots(body, c) {
   if (!shots.length) {
     body.append(h('div.side-empty',
       h('p', { text: 'paste a screenshot with ctrl+v and it lands here.' }),
-      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=764fd7e397')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=66fb115653')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
         icon('image', { size: 13 }), 'add a picture')));
     return;
   }
@@ -453,7 +465,7 @@ function paintTimeline(body, c) {
   if (!rows.length) {
     body.append(h('div.side-empty',
       h('p', { text: 'press t while the vod plays and the moment lands here.' }),
-      h('button.btn.btn-sm', { on: { click: async () => (await import('./video.js?v=764fd7e397')).insertTimestamp(currentBlockId() || c.blocks.at(-1)?.id) } },
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./video.js?v=66fb115653')).insertTimestamp(currentBlockId() || c.blocks.at(-1)?.id) } },
         icon('clock', { size: 13 }), 'stamp this moment')));
     return;
   }
@@ -477,7 +489,7 @@ function paintTimeline(body, c) {
 }
 
 async function goToStamp(row) {
-  try { (await import('./video.js?v=764fd7e397')).seekTo(row.t); } catch { /* no video panel is fine */ }
+  try { (await import('./video.js?v=66fb115653')).seekTo(row.t); } catch { /* no video panel is fine */ }
   if (row.kind === 'card') { openCardPage(row.ref); return; }
   if (row.kind === 'block') { jumpToBlock(row.ref); return; }
   const el = $(row.kind === 'side' ? `.sidenote[data-id="${CSS.escape(row.ref)}"]` : `.freebox[data-id="${CSS.escape(row.ref)}"]`);
@@ -647,7 +659,7 @@ function paintAddPalette(body, c) {
   const at = () => currentBlockId() || lastId();
 
   const add = async (type, extra) => {
-    const ed = await import('./editor.js?v=764fd7e397');
+    const ed = await import('./editor.js?v=66fb115653');
     const made = ed.insertBlock(at(), { type: 'p' }, false);
     if (type === 'p') { ed.focusBlock(made.id, 'end'); return; }
     ed.setType(made.id, type, extra);
@@ -665,11 +677,11 @@ function paintAddPalette(body, c) {
     ['code', 'codeTag', () => add('code')],
     ['divider', 'divider', () => add('divider')],
     ['table', 'table', () => add('table', { rows: [['', '', ''], ['', '', ''], ['', '', '']], header: true })],
-    ['picture', 'image', async () => (await import('./images.js?v=764fd7e397')).pickImageFile(at())],
+    ['picture', 'image', async () => (await import('./images.js?v=66fb115653')).pickImageFile(at())],
     ['text box', 'textbox', () => addFreeBox()],
     ['margin note', 'sidenote', () => addSidenoteFromSelection()],
     ['sub-page', 'cards', () => addSubPage(at())],
-    ['timestamp', 'clock', async () => (await import('./video.js?v=764fd7e397')).insertTimestamp(at())],
+    ['timestamp', 'clock', async () => (await import('./video.js?v=66fb115653')).insertTimestamp(at())],
   ];
 
   body.append(h('div.side-grid', ...items.map(([label, ico, run]) => h('button.side-add', {
@@ -771,7 +783,7 @@ export function markOutlinePosition() {
 }
 
 async function addHeading() {
-  const ed = await import('./editor.js?v=764fd7e397');
+  const ed = await import('./editor.js?v=66fb115653');
   const last = card(state.cardId).blocks.at(-1)?.id;
   const made = ed.insertBlock(last, { type: 'p' }, false);
   ed.setType(made.id, 'h2');
@@ -832,7 +844,7 @@ function paintMeta() {
   if (c.t !== null && c.t !== undefined) {
     wrap.append(h('button.chip.chip-time', {
       tip: 'jump the video here',
-      on: { click: async () => (await import('./video.js?v=764fd7e397')).seekTo(c.t) },
+      on: { click: async () => (await import('./video.js?v=66fb115653')).seekTo(c.t) },
     }, icon('clock', { size: 12 }), fmtClock(c.t)));
   }
 
@@ -867,13 +879,13 @@ function tagMenu(anchor) {
   const existing = allTags().map(([t]) => t).filter((t) => !(c.tags || []).includes(t));
   const input = h('input.field', { placeholder: 'new tag…', spellcheck: false });
   const list = h('div.tag-pop-list', ...existing.slice(0, 8).map((t) => h('button.menu-row', {
-    on: { click: () => { addTag(t); import('./ui.js?v=764fd7e397').then((m) => m.closePopover()); } },
+    on: { click: () => { addTag(t); import('./ui.js?v=66fb115653').then((m) => m.closePopover()); } },
   }, h('span.menu-ico', { text: '#' }), h('span.menu-label', { text: t }))));
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const value = input.value.trim().replace(/^#/, '').toLowerCase().replace(/\s+/g, '-');
       if (value) addTag(value);
-      import('./ui.js?v=764fd7e397').then((m) => m.closePopover());
+      import('./ui.js?v=66fb115653').then((m) => m.closePopover());
     }
   });
   popover(h('div.tag-pop', input, existing.length ? list : null), { anchor, width: 210 });
@@ -894,23 +906,26 @@ function pageMenu(anchor) {
   const c = card(state.cardId);
   contextMenu([
     { label: 'open the map', icon: 'grid', hint: 'ctrl+b', onPick: () => toggleMap() },
-    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=764fd7e397')).openReader() },
+    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=66fb115653')).openReader() },
     { sep: true },
     { label: 'add a sub-page', icon: 'cards', onPick: () => addSubPage(null) },
     { label: 'floating text box', icon: 'textbox', hint: 'ctrl+shift+t', onPick: () => addFreeBox() },
+    { label: 'draw a line between two things', icon: 'link', hint: 'c', onPick: () => startWire() },
+    { label: 'arrange this page…', icon: 'grid', hint: 'presets',
+      onPick: async () => (await import('./layouts.js?v=66fb115653')).openLayouts() },
     { sep: true },
     { label: 'loot routes', icon: 'target', hint: 'map',
-      onPick: async () => (await import('./lootmap.js?v=764fd7e397')).openLootmap() },
+      onPick: async () => (await import('./lootmap.js?v=66fb115653')).openLootmap() },
     { label: 'earlier versions of this session', icon: 'history',
-      onPick: async () => (await import('./history.js?v=764fd7e397')).openHistory() },
+      onPick: async () => (await import('./history.js?v=66fb115653')).openHistory() },
     { label: 'save this page as a template', icon: 'copy', hint: 'reuse',
-      onPick: async () => (await import('./templates.js?v=764fd7e397')).saveAsTemplate(c) },
+      onPick: async () => (await import('./templates.js?v=66fb115653')).saveAsTemplate(c) },
     { sep: true },
-    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=764fd7e397')).exportMarkdown(c.id) },
-    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=764fd7e397')).exportHtml(c.id) },
-    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=764fd7e397')).exportSession(state.board.id) },
+    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=66fb115653')).exportMarkdown(c.id) },
+    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=66fb115653')).exportHtml(c.id) },
+    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=66fb115653')).exportSession(state.board.id) },
     { label: 'export the clip list', icon: 'clock', hint: '.csv',
-      onPick: async () => (await import('./exporter.js?v=764fd7e397')).exportClipList(state.board, { csv: true }) },
+      onPick: async () => (await import('./exporter.js?v=66fb115653')).exportClipList(state.board, { csv: true }) },
     ...(c.parent ? [{ sep: true }, { label: 'delete this page', icon: 'trash', danger: true, onPick: () => removePage(c) }] : []),
   ], { anchor, align: 'end' });
 }
@@ -996,7 +1011,7 @@ export function addSidenoteFromSelection() {
   const noteId = uid('sn');
   const sel = getSelection();
   if (sel && !sel.isCollapsed) {
-    import('./editor.js?v=764fd7e397').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
+    import('./editor.js?v=66fb115653').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
   } else {
     const mark = document.createElement('span');
     mark.setAttribute('data-side', noteId);
@@ -1172,7 +1187,7 @@ function freeBoxEl(box) {
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      import('./whiteboard.js?v=764fd7e397').then(({ STICKY_COLOURS }) => {
+      import('./whiteboard.js?v=66fb115653').then(({ STICKY_COLOURS }) => {
         contextMenu([
           { row: STICKY_COLOURS.map((c) => ({ icon: 'callout', color: c, tip: 'recolour', onPick: () => {
             const cardId = state.cardId;

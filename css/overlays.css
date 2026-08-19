@@ -662,3 +662,27 @@
 .lm-route-verdict { font-size: 10.5px; margin-top: 2px; }
 .lm-route-verdict.good { color: var(--sev-3); }
 .lm-route-verdict.bad { color: var(--sev-2); }
+
+/* ---------------- arrange: preset page structures ---------------- */
+
+.layout-list { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.layout-card {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft); border-radius: var(--radius);
+  background: var(--bg-2); color: var(--text);
+  font: inherit; text-align: left; cursor: pointer;
+  transition: border-color var(--d1), background var(--d1);
+}
+.layout-card:hover { border-color: var(--accent); background: var(--bg-3); }
+.layout-card.off { opacity: .45; cursor: default; }
+.layout-card.off:hover { border-color: var(--line-soft); background: var(--bg-2); }
+.layout-art { flex: none; width: 72px; height: 50px; display: grid; place-items: center;
+  border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: var(--bg-0); }
+.layout-svg { width: 60px; height: 42px; }
+.la-text { fill: var(--faint); }
+.la-shot { fill: var(--accent); opacity: .65; }
+.la-wire { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+.layout-meat { min-width: 0; }
+.layout-name { font-size: var(--t-0); font-weight: 600; margin-bottom: 2px; }
+.layout-blurb { font-size: var(--t--1); color: var(--faint); line-height: 1.45; }

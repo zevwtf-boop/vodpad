@@ -7,12 +7,12 @@
    annotations come along: each pane draws the same stroke layer the page does,
    so arrows and boxes stay where they were put. */
 
-import { h, clear, clamp, stripHtml } from './util.js?v=764fd7e397';
-import { icon } from './icons.js?v=764fd7e397';
-import { mediaUrl } from './api.js?v=764fd7e397';
-import { state, card, cardTitle } from './store.js?v=764fd7e397';
-import { strokeLayer } from './images.js?v=764fd7e397';
-import { openModal, toast } from './ui.js?v=764fd7e397';
+import { h, clear, clamp, stripHtml } from './util.js?v=66fb115653';
+import { icon } from './icons.js?v=66fb115653';
+import { mediaUrl } from './api.js?v=66fb115653';
+import { state, card, cardTitle } from './store.js?v=66fb115653';
+import { strokeLayer } from './images.js?v=66fb115653';
+import { openModal, toast } from './ui.js?v=66fb115653';
 
 const MIN_Z = 0.2;
 const MAX_Z = 8;

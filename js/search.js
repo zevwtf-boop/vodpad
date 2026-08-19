@@ -1,14 +1,14 @@
 /* ctrl+k — one box for every command and every note you have ever written. */
 
-import { $, h, clear, debounce, fuzzy, highlight, stripHtml, previewOf, fmtRel } from './util.js?v=764fd7e397';
-import { icon } from './icons.js?v=764fd7e397';
-import { state, card, cardTitle, createBoard } from './store.js?v=764fd7e397';
-import { pushLayer, dropLayer, toast } from './ui.js?v=764fd7e397';
-import { popIn, popOut } from './motion.js?v=764fd7e397';
-import { go, toggleMap } from './nav.js?v=764fd7e397';
-import { allCards } from './corpus.js?v=764fd7e397';
-import { openGear } from './settings.js?v=764fd7e397';
-import { showView } from './dashboard.js?v=764fd7e397';
+import { $, h, clear, debounce, fuzzy, highlight, stripHtml, previewOf, fmtRel } from './util.js?v=66fb115653';
+import { icon } from './icons.js?v=66fb115653';
+import { state, card, cardTitle, createBoard } from './store.js?v=66fb115653';
+import { pushLayer, dropLayer, toast } from './ui.js?v=66fb115653';
+import { popIn, popOut } from './motion.js?v=66fb115653';
+import { go, toggleMap } from './nav.js?v=66fb115653';
+import { allCards } from './corpus.js?v=66fb115653';
+import { openGear } from './settings.js?v=66fb115653';
+import { showView } from './dashboard.js?v=66fb115653';
 
 let close = null;
 let rows = [];
@@ -71,13 +71,13 @@ function commands() {
     // starting a session goes through the same dialog as the dashboard button,
     // so the template picker is not something you can only find one way
     { id: 'new', title: 'new session', sub: 'start a fresh vod review', ico: 'plus', hint: 'n', run: async () => {
-      const { askForNewSession, applyTemplate } = await import('./templates.js?v=764fd7e397');
+      const { askForNewSession, applyTemplate } = await import('./templates.js?v=66fb115653');
       const picked = await askForNewSession();
       if (!picked) return;
       const board = await createBoard(picked.title);
       if (picked.template?.blocks?.length) {
         applyTemplate(board, picked.template);
-        const { api } = await import('./api.js?v=764fd7e397');
+        const { api } = await import('./api.js?v=66fb115653');
         await api.saveBoard(board.id, board);
       }
       go({ name: 'page', boardId: board.id });
@@ -90,25 +90,27 @@ function commands() {
     state.admin && { id: 'accounts', title: 'accounts and invite codes', sub: 'who can sign in, and the codes that let them', ico: 'users',
       run: () => go({ name: 'dash' }).then(() => showView('accounts')) },
     inBoard && { id: 'map', title: 'page ⇄ map', sub: 'see the sub-pages spatially', ico: 'grid', hint: 'ctrl+b', run: () => toggleMap() },
-    inBoard && { id: 'read', title: 'read mode', sub: 'the whole branch as one document', ico: 'book', hint: 'ctrl+r', run: async () => (await import('./readmode.js?v=764fd7e397')).openReader() },
-    inBoard && { id: 'sub', title: 'add a sub-page', sub: 'expand on the topic you are in', ico: 'cards', run: async () => (await import('./page.js?v=764fd7e397')).addSubPage(null) },
-    inBoard && { id: 'box', title: 'floating text box', sub: 'drop text anywhere on the page', ico: 'textbox', hint: 'ctrl+shift+t', run: async () => (await import('./page.js?v=764fd7e397')).addFreeBox() },
-    inBoard && { id: 'video', title: 'video panel', sub: 'a recording or a youtube link', ico: 'video', hint: 'v', run: async () => (await import('./video.js?v=764fd7e397')).toggleVideo() },
-    inBoard && { id: 'frames', title: 'pick a frame', sub: 'the eight either side of where the vod is', ico: 'layers', hint: 'shift+s', run: async () => (await import('./video.js?v=764fd7e397')).pickFrame() },
-    inBoard && { id: 'loot', title: 'loot routes', sub: 'plan a drop and a rotation on the real island', ico: 'target', run: async () => (await import('./lootmap.js?v=764fd7e397')).openLootmap() },
-    inBoard && { id: 'history', title: 'earlier versions of this session', sub: 'look at one, or go back to it', ico: 'history', run: async () => (await import('./history.js?v=764fd7e397')).openHistory() },
+    inBoard && { id: 'read', title: 'read mode', sub: 'the whole branch as one document', ico: 'book', hint: 'ctrl+r', run: async () => (await import('./readmode.js?v=66fb115653')).openReader() },
+    inBoard && { id: 'sub', title: 'add a sub-page', sub: 'expand on the topic you are in', ico: 'cards', run: async () => (await import('./page.js?v=66fb115653')).addSubPage(null) },
+    inBoard && { id: 'box', title: 'floating text box', sub: 'drop text anywhere on the page', ico: 'textbox', hint: 'ctrl+shift+t', run: async () => (await import('./page.js?v=66fb115653')).addFreeBox() },
+    inBoard && { id: 'video', title: 'video panel', sub: 'a recording or a youtube link', ico: 'video', hint: 'v', run: async () => (await import('./video.js?v=66fb115653')).toggleVideo() },
+    inBoard && { id: 'frames', title: 'pick a frame', sub: 'the eight either side of where the vod is', ico: 'layers', hint: 'shift+s', run: async () => (await import('./video.js?v=66fb115653')).pickFrame() },
+    inBoard && { id: 'arrange', title: 'arrange this page', sub: 'notes beside the picture, a grid of shots, or spread out to draw on', ico: 'grid', run: async () => (await import('./layouts.js?v=66fb115653')).openLayouts() },
+    inBoard && { id: 'wire', title: 'draw a line between two things', sub: 'click one, click the other', ico: 'link', hint: 'c', run: async () => (await import('./wires.js?v=66fb115653')).startWire() },
+    inBoard && { id: 'loot', title: 'loot routes', sub: 'plan a drop and a rotation on the real island', ico: 'target', run: async () => (await import('./lootmap.js?v=66fb115653')).openLootmap() },
+    inBoard && { id: 'history', title: 'earlier versions of this session', sub: 'look at one, or go back to it', ico: 'history', run: async () => (await import('./history.js?v=66fb115653')).openHistory() },
     inBoard && { id: 'tpl', title: 'save this page as a template', sub: 'start future sessions from it', ico: 'copy', run: async () => {
-      const { saveAsTemplate } = await import('./templates.js?v=764fd7e397');
-      const { card } = await import('./store.js?v=764fd7e397');
+      const { saveAsTemplate } = await import('./templates.js?v=66fb115653');
+      const { card } = await import('./store.js?v=66fb115653');
       saveAsTemplate(card(state.cardId));
     } },
-    inBoard && { id: 'md', title: 'export markdown', sub: 'this page and everything under it', ico: 'download', run: async () => (await import('./exporter.js?v=764fd7e397')).exportMarkdown(state.cardId) },
-    inBoard && { id: 'html', title: 'export html', sub: 'self-contained, pictures included', ico: 'download', run: async () => (await import('./exporter.js?v=764fd7e397')).exportHtml(state.cardId) },
-    inBoard && { id: 'clips', title: 'export the clip list', sub: 'every timestamp in the session, for an editor', ico: 'clock', hint: '.csv', run: async () => (await import('./exporter.js?v=764fd7e397')).exportClipList(state.board, { csv: true }) },
+    inBoard && { id: 'md', title: 'export markdown', sub: 'this page and everything under it', ico: 'download', run: async () => (await import('./exporter.js?v=66fb115653')).exportMarkdown(state.cardId) },
+    inBoard && { id: 'html', title: 'export html', sub: 'self-contained, pictures included', ico: 'download', run: async () => (await import('./exporter.js?v=66fb115653')).exportHtml(state.cardId) },
+    inBoard && { id: 'clips', title: 'export the clip list', sub: 'every timestamp in the session, for an editor', ico: 'clock', hint: '.csv', run: async () => (await import('./exporter.js?v=66fb115653')).exportClipList(state.board, { csv: true }) },
     { id: 'theme', title: 'change the theme', sub: 'colours, type, density', ico: 'palette', run: () => openGear('appearance') },
     { id: 'motion', title: 'animation settings', sub: 'full, subtle or off', ico: 'sparkle', run: () => openGear('motion') },
     { id: 'keys', title: 'keyboard shortcuts', sub: 'the whole list', ico: 'grid', run: () => openGear('keys') },
-    { id: 'files', title: 'open the notes folder', sub: 'your json + png files on disk', ico: 'folder', run: async () => (await import('./api.js?v=764fd7e397')).api.reveal('data') },
+    { id: 'files', title: 'open the notes folder', sub: 'your json + png files on disk', ico: 'folder', run: async () => (await import('./api.js?v=66fb115653')).api.reveal('data') },
   ].filter(Boolean);
 }
 

@@ -10,10 +10,10 @@
    there too or it would vanish on save. cloud and vault store settings as
    free-form json. */
 
-import { h, uid, clear } from './util.js?v=764fd7e397';
-import { icon } from './icons.js?v=764fd7e397';
-import { state, setSetting } from './store.js?v=764fd7e397';
-import { openModal, toast, confirmDialog, promptDialog, contextMenu } from './ui.js?v=764fd7e397';
+import { h, uid, clear } from './util.js?v=66fb115653';
+import { icon } from './icons.js?v=66fb115653';
+import { state, setSetting } from './store.js?v=66fb115653';
+import { openModal, toast, confirmDialog, promptDialog, contextMenu } from './ui.js?v=66fb115653';
 
 const p = (html) => ({ type: 'p', html });
 const h2 = (html) => ({ type: 'h2', html });

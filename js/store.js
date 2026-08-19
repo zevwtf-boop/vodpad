@@ -1,8 +1,8 @@
 /* the single source of truth: state, mutations, undo, autosave.
    nothing renders from here — surfaces subscribe to the bus and redraw. */
 
-import { api, isStatic, mode, mediaNamesOf } from './api.js?v=764fd7e397';
-import { emitter, uid, debounce, stripHtml } from './util.js?v=764fd7e397';
+import { api, isStatic, mode, mediaNamesOf } from './api.js?v=66fb115653';
+import { emitter, uid, debounce, stripHtml } from './util.js?v=66fb115653';
 
 export const bus = emitter();
 

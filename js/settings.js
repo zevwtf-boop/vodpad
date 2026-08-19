@@ -1,28 +1,17 @@
 /* the gear — everything you can change lives here, not in a ribbon. */
 
-import { $, h, clear } from './util.js?v=764fd7e397';
-import { icon } from './icons.js?v=764fd7e397';
-import { api, isStatic, mode } from './api.js?v=764fd7e397';
-import { state, setSetting, bus } from './store.js?v=764fd7e397';
-import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from './ui.js?v=764fd7e397';
-import { animate, settle, fadeOut, EASE } from './motion.js?v=764fd7e397';
+import { $, h, clear } from './util.js?v=66fb115653';
+import { icon } from './icons.js?v=66fb115653';
+import { api, isStatic, mode } from './api.js?v=66fb115653';
+import { state, setSetting, bus } from './store.js?v=66fb115653';
+import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from './ui.js?v=66fb115653';
+import { animate, settle, fadeOut, EASE } from './motion.js?v=66fb115653';
 
 const THEMES = [
-  ['carbon', 'carbon', ['#0d0d0f', '#191a1d', '#e5484d']],
-  ['ember', 'ember', ['#0e0c0c', '#1a1817', '#e5484d']],
-  ['slate', 'slate', ['#0c0e12', '#171b22', '#5b8dee']],
-  ['daylight', 'daylight', ['#f6f7f8', '#ffffff', '#cf3239']],
-  ['ash', 'ash', ['#08080a', '#17171a', '#ff3b46']],
-  ['aimbot', 'aimbot', ['#040706', '#0f1a16', '#39ff9e']],
-  ['esp', 'esp', ['#03060c', '#0c1a2b', '#00e5ff']],
-  ['chams', 'chams', ['#08040e', '#1a0f2b', '#ff2fd6']],
-  ['tracer', 'tracer', ['#0a0603', '#1e1109', '#ff8a00']],
-  ['wallhack', 'wallhack', ['#04060f', '#0f162c', '#4d7cff']],
-  ['night-lilac', 'night lilac', ['#0b0714', '#1e1235', '#c9a7ff']],
-  ['deep-plum', 'deep plum', ['#120818', '#281337', '#dba7ff']],
-  ['midnight', 'midnight', ['#080b18', '#171d36', '#a9b8ff']],
-  ['obsidian', 'obsidian', ['#0a0a0d', '#18181e', '#c9a7ff']],
-  ['nocturne', 'nocturne', ['#100813', '#26152d', '#ff9ecf']],
+  ['graphite', 'graphite', ['#17191c', '#25282c', '#e5484d']],
+  ['fog', 'fog', ['#2a2d31', '#3b3f45', '#ef5b60']],
+  ['ink', 'ink', ['#0b0c0d', '#17191b', '#e5484d']],
+  ['daylight', 'daylight', ['#eceef0', '#ffffff', '#cf3239']],
 ];
 
 const ACCENTS = [
@@ -43,16 +32,26 @@ const ACCENTS = [
 
 /* ---------------------------------------------------------------- applying */
 
+/* twelve themes were removed. anyone whose settings still name one gets moved
+   onto the nearest survivor rather than silently falling through to :root. */
+const RETIRED = {
+  carbon: 'graphite', ember: 'graphite', ash: 'ink', slate: 'graphite',
+  'night-lilac': 'ink', 'deep-plum': 'ink', midnight: 'ink', obsidian: 'ink',
+  nocturne: 'ink', aimbot: 'graphite', esp: 'graphite', chams: 'graphite',
+  tracer: 'graphite', wallhack: 'graphite',
+};
+
 export function applySettings(s = state.settings) {
   const root = document.documentElement;
-  root.dataset.theme = s.theme || 'carbon';
+  if (RETIRED[s.theme]) s.theme = RETIRED[s.theme];
+  root.dataset.theme = s.theme || 'graphite';
   root.dataset.motion = s.motion || 'full';
   root.dataset.density = s.density || 'comfortable';
   root.dataset.font = s.font || 'sans';
 
   root.style.setProperty('--text-size', `${s.textSize || 16}px`);
-  root.style.setProperty('--line-height', String(s.lineHeight || 1.65));
-  root.style.setProperty('--page-width', `${s.pageWidth || 78}ch`);
+  root.style.setProperty('--line-height', String(s.lineHeight || 1.7));
+  root.style.setProperty('--page-width', `${s.pageWidth || 72}ch`);
   root.style.setProperty('--radius', `${s.radius ?? 8}px`);
   root.style.setProperty('--radius-sm', `${Math.max(3, (s.radius ?? 8) - 2)}px`);
   root.style.setProperty('--radius-lg', `${(s.radius ?? 8) + 4}px`);
@@ -162,8 +161,8 @@ function appearanceTab(s) {
         { label: 'sans', value: 'sans' }, { label: 'serif', value: 'serif' }, { label: 'mono', value: 'mono' },
       ], s.font || 'sans', (v) => { setSetting('font', v); applySettings(); }), 'what the document itself is set in'),
       slider('text size', 'textSize', s.textSize || 16, 13, 22, 1, 'px'),
-      slider('line height', 'lineHeight', s.lineHeight || 1.65, 1.3, 2.1, 0.05, ''),
-      slider('page width', 'pageWidth', s.pageWidth || 78, 52, 110, 2, 'ch'),
+      slider('line height', 'lineHeight', s.lineHeight || 1.7, 1.3, 2.1, 0.05, ''),
+      slider('page width', 'pageWidth', s.pageWidth || 72, 52, 110, 2, 'ch'),
     ),
     h('section.gear-section',
       h('h3', { text: 'shape' }),
@@ -234,9 +233,9 @@ function dataTab() {
     state.board ? h('section.gear-section',
       h('h3', { text: 'export this session' }),
       h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=764fd7e397')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=764fd7e397')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
-        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=764fd7e397')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=66fb115653')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=66fb115653')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
+        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=66fb115653')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
     ) : null,
     h('section.gear-section',
       h('h3', { text: 'server' }),
@@ -251,7 +250,7 @@ function webDataTab() {
   const synced = mode === 'cloud';
   const size = h('p.modal-text', { text: synced ? '' : 'measuring…' });
   if (!synced) {
-    import('./vault.js?v=764fd7e397').then(async (v) => {
+    import('./vault.js?v=66fb115653').then(async (v) => {
       const s = await v.vaultSize();
       size.textContent = `${s.records} sealed records · about ${(s.bytes / 1048576).toFixed(1)} mb, all of it encrypted with your password.`;
     });
@@ -266,7 +265,7 @@ function webDataTab() {
           : `you are ${currentUserName()} on the hosted copy. your notes live in this browser only — they do not follow you to another device.`,
       }),
       size,
-      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./api.js?v=764fd7e397')).signOut() } },
+      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./api.js?v=66fb115653')).signOut() } },
         icon('back', { size: 14 }), 'sign out'),
     ),
     synced ? null : h('section.gear-section',
@@ -279,9 +278,9 @@ function webDataTab() {
     state.board ? h('section.gear-section',
       h('h3', { text: 'export this session' }),
       h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=764fd7e397')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=764fd7e397')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
-        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=764fd7e397')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=66fb115653')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=66fb115653')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
+        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=66fb115653')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
     ) : null,
   );
 }
@@ -291,8 +290,8 @@ function currentUserName() {
 }
 
 async function doBackup() {
-  const v = await import('./vault.js?v=764fd7e397');
-  const { download } = await import('./util.js?v=764fd7e397');
+  const v = await import('./vault.js?v=66fb115653');
+  const { download } = await import('./util.js?v=66fb115653');
   const vault = await v.exportVault();
   download(`vodpad-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(vault), 'application/json');
   toast('backup saved to downloads — it is encrypted', { kind: 'ok' });
@@ -306,7 +305,7 @@ async function doRestore() {
     input.remove();
     if (!file) return;
     try {
-      const v = await import('./vault.js?v=764fd7e397');
+      const v = await import('./vault.js?v=66fb115653');
       const n = await v.importVault(file);
       toast(`restored ${n} records — reloading`, { kind: 'ok' });
       setTimeout(() => location.reload(), 900);

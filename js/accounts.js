@@ -8,12 +8,12 @@
    somebody generated a code here and handed it over, which is the whole point
    of this screen. */
 
-import { h, clear, fmtRel, fmtDate, fmtBytes, download } from './util.js?v=764fd7e397';
-import { icon } from './icons.js?v=764fd7e397';
-import { adminApi } from './api.js?v=764fd7e397';
-import { state } from './store.js?v=764fd7e397';
-import { toast, contextMenu, confirmDialog, openModal, segmented } from './ui.js?v=764fd7e397';
-import { stagger } from './motion.js?v=764fd7e397';
+import { h, clear, fmtRel, fmtDate, fmtBytes, download } from './util.js?v=66fb115653';
+import { icon } from './icons.js?v=66fb115653';
+import { adminApi } from './api.js?v=66fb115653';
+import { state } from './store.js?v=66fb115653';
+import { toast, contextMenu, confirmDialog, openModal, segmented } from './ui.js?v=66fb115653';
+import { stagger } from './motion.js?v=66fb115653';
 
 let data = null;          // {accounts, invites, totals}
 let loading = null;

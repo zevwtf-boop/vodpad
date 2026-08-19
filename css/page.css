@@ -360,26 +360,32 @@
 .blk + .blk { margin-top: 3px; }
 .blk[data-type="p"] + .blk[data-type="p"] { margin-top: 7px; }
 .page-sheet ::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); color: var(--text); }
+/* the handles are VISIBLE AT REST. they used to be opacity:0 until you hovered
+   within 56px of a block, which is the whole reason moving text felt like a
+   fight — you cannot grab what you cannot see. they sit back at 40% and come
+   up when you are near. */
 .blk-rail {
-  position: absolute; left: -56px; top: 1px;
+  position: absolute; left: -52px; top: 1px;
   display: flex; gap: 1px;
-  opacity: 0; transform: translateX(4px);
-  transition: opacity var(--d1), transform var(--d1);
+  opacity: .4;
+  transition: opacity var(--d1);
 }
-.blk:hover > .blk-rail, .blk.active > .blk-rail { opacity: 1; transform: none; }
+.blk:hover > .blk-rail, .blk.active > .blk-rail, .blk-rail:focus-within { opacity: 1; }
 .blk-btn {
   width: 24px; height: 26px; display: grid; place-items: center;
   border: 0; border-radius: var(--radius-sm); background: none; color: var(--faint); cursor: pointer;
   transition: background var(--d1), color var(--d1);
 }
 .blk-btn:hover { background: var(--bg-3); color: var(--text); }
+/* a fat, obvious grab target — and the whole left margin of a block drags it */
 .blk-grip { cursor: grab; }
+.blk-grip:active { cursor: grabbing; }
+.blk.dragging .blk-grip { cursor: grabbing; }
 .blk.dragging { opacity: .4; }
 body.dragging-block { cursor: grabbing; user-select: none; }
 .drop-line {
   position: absolute; left: 0; right: 0; height: 2px;
   background: var(--accent); border-radius: 2px; pointer-events: none;
-  box-shadow: 0 0 10px var(--accent);
 }
 
 .blk-main { padding-left: calc(var(--indent, 0) * 26px); transition: padding var(--d2) var(--ease-emph); }
@@ -955,3 +961,35 @@ body.drop-armed #surface-page::after {
 .clock-label { font-size: 11.5px; color: var(--faint); }
 .clock-offset { width: 78px; height: 28px; text-align: center; font-family: var(--font-mono); font-size: 12px; }
 .video-hint { margin: 0; max-width: 300px; font-size: 11px; line-height: 1.5; color: var(--faint); text-align: center; }
+
+/* ---------------- wires: lines drawn between things ---------------- */
+
+/* above the anchor hint layer, which clears itself constantly on mouseover */
+.page-wires {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  overflow: visible; pointer-events: none; z-index: 7;
+}
+.wire {
+  fill: none; stroke-width: 2; stroke-linecap: round;
+  opacity: .85; pointer-events: none;
+}
+/* a 2px curve is not a click target — this fat twin is */
+.wire-hit {
+  fill: none; stroke: transparent; stroke-width: 16;
+  pointer-events: stroke; cursor: pointer;
+}
+.wire-hit:hover + .wire, .wire-hit:hover { opacity: 1; }
+.wire-ghost { stroke: var(--accent); stroke-dasharray: 5 4; opacity: .7; }
+.wire-label {
+  font-family: var(--font-ui); font-size: 10.5px; fill: var(--muted);
+  text-anchor: middle; paint-order: stroke; stroke: var(--bg-0); stroke-width: 3;
+  pointer-events: none;
+}
+
+/* while the tool is armed */
+body.wiring { cursor: crosshair; }
+body.wiring .blk, body.wiring .freebox, body.wiring .sidenote { cursor: crosshair; }
+body.wiring .blk:hover, body.wiring .freebox:hover, body.wiring .sidenote:hover {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-sm);
+}
+.wire-from { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-sm); }
