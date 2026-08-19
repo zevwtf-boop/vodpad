@@ -1,14 +1,14 @@
 /* the entrance. sessions, the drill list, and what you've been getting wrong. */
 
-import { $, h, clear, fmtRel, fmtDate, previewOf, escapeHtml, debounce } from './util.js?v=5aab9d9b3f';
-import { icon } from './icons.js?v=5aab9d9b3f';
-import { mediaUrl, api, mode } from './api.js?v=5aab9d9b3f';
-import { state, bus, createBoard, deleteBoard, refreshBoards, cardTitle, saveSettings, ownerCounts, isForeign } from './store.js?v=5aab9d9b3f';
-import { registerSurface, go } from './nav.js?v=5aab9d9b3f';
-import { toast, contextMenu, promptDialog, confirmDialog } from './ui.js?v=5aab9d9b3f';
-import { stagger, countUp, animate, EASE } from './motion.js?v=5aab9d9b3f';
-import { allCards } from './corpus.js?v=5aab9d9b3f';
-import { openGear } from './settings.js?v=5aab9d9b3f';
+import { $, h, clear, fmtRel, fmtDate, previewOf, escapeHtml, debounce } from './util.js?v=44ebe426f1';
+import { icon } from './icons.js?v=44ebe426f1';
+import { mediaUrl, api, mode } from './api.js?v=44ebe426f1';
+import { state, bus, createBoard, deleteBoard, refreshBoards, cardTitle, saveSettings, ownerCounts, isForeign } from './store.js?v=44ebe426f1';
+import { registerSurface, go } from './nav.js?v=44ebe426f1';
+import { toast, contextMenu, promptDialog, confirmDialog } from './ui.js?v=44ebe426f1';
+import { stagger, countUp, animate, EASE } from './motion.js?v=44ebe426f1';
+import { allCards } from './corpus.js?v=44ebe426f1';
+import { openGear } from './settings.js?v=44ebe426f1';
 
 let view = { kind: 'all', tag: null, owner: null };
 let query = '';
@@ -114,7 +114,7 @@ function main() {
           on: { input: debounce((e) => { query = e.target.value; paintGrid(); }, 120) },
         })),
       h('button.btn', { tip: 'bring in a .vodpad session file from another device or another person',
-        on: { click: async () => (await import('./transfer.js?v=5aab9d9b3f')).pickSessionFile() } }, icon('upload', { size: 15 }), 'import'),
+        on: { click: async () => (await import('./transfer.js?v=44ebe426f1')).pickSessionFile() } }, icon('upload', { size: 15 }), 'import'),
       h('button.btn.btn-primary', { on: { click: newSession } }, icon('plus', { size: 15 }), 'new session')),
   ));
 
@@ -160,11 +160,11 @@ async function paintGrid() {
 
   if (view.kind === 'drill') return paintDrill(body);
   if (view.kind === 'patterns') {
-    const { paintPatterns } = await import('./patterns.js?v=5aab9d9b3f');
+    const { paintPatterns } = await import('./patterns.js?v=44ebe426f1');
     return paintPatterns(body);
   }
   if (view.kind === 'accounts') {
-    const { paintAccounts } = await import('./accounts.js?v=5aab9d9b3f');
+    const { paintAccounts } = await import('./accounts.js?v=44ebe426f1');
     return paintAccounts(body, (owner) => show('owner', { owner }));
   }
 
@@ -284,7 +284,7 @@ function cardMenu(meta, anchor, x, y) {
     } : null,
     !synced ? { label: 'show files', icon: 'folder', onPick: () => api.reveal('board', meta.id).catch(() => {}) } : null,
     { sep: true },
-    { label: 'export session file', icon: 'download', hint: '.vodpad', onPick: async () => (await import('./transfer.js?v=5aab9d9b3f')).exportSession(meta.id) },
+    { label: 'export session file', icon: 'download', hint: '.vodpad', onPick: async () => (await import('./transfer.js?v=44ebe426f1')).exportSession(meta.id) },
     {
       label: 'clip list for an editor', icon: 'clock',
       sub: [
@@ -295,7 +295,7 @@ function cardMenu(meta, anchor, x, y) {
       ],
       subWidth: 280,
     },
-    { label: 'how do i send this to someone?', icon: 'link', onPick: async () => (await import('./transfer.js?v=5aab9d9b3f')).transferHelp() },
+    { label: 'how do i send this to someone?', icon: 'link', onPick: async () => (await import('./transfer.js?v=44ebe426f1')).transferHelp() },
     mine ? { sep: true } : null,
     mine ? { label: 'delete session', icon: 'trash', danger: true, onPick: () => remove(meta) } : null,
   ].filter(Boolean), anchor ? { anchor, align: 'end' } : { x, y });
@@ -305,7 +305,7 @@ function cardMenu(meta, anchor, x, y) {
 async function clips(meta, csv) {
   try {
     const doc = state.board?.id === meta.id ? state.board : await api.board(meta.id);
-    const { exportClipList } = await import('./exporter.js?v=5aab9d9b3f');
+    const { exportClipList } = await import('./exporter.js?v=44ebe426f1');
     await exportClipList(doc, { csv });
   } catch (err) { toast(err.message, { kind: 'error' }); }
 }
@@ -346,14 +346,16 @@ async function remove(meta) {
 }
 
 async function newSession() {
-  const { askForNewSession, applyTemplate } = await import('./templates.js?v=5aab9d9b3f');
+  const { askForNewSession, applyTemplate } = await import('./templates.js?v=44ebe426f1');
   const picked = await askForNewSession();
   if (!picked) return;
 
   const board = await createBoard(picked.title);
   // the template is stamped on after creation, so a backend that fails here
-  // still leaves you with a real (empty) session rather than nothing
-  if (picked.template?.blocks?.length) {
+  // still leaves you with a real (empty) session rather than nothing.
+  // NOTE: not `blocks?.length` — "blank" has no blocks and its whole job is to
+  // empty the page and turn the paper off, so it has to be applied too.
+  if (picked.template) {
     try {
       applyTemplate(board, picked.template);
       await api.saveBoard(board.id, board);

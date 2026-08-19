@@ -12,14 +12,14 @@
    corpus.js already holds every session for the drill list and the global
    search, so this reuses that rather than fetching the world again. */
 
-import { h, clear, fmtRel, previewOf } from './util.js?v=5aab9d9b3f';
-import { icon } from './icons.js?v=5aab9d9b3f';
-import { state, cardTitle, SEV_SHORT } from './store.js?v=5aab9d9b3f';
-import { allCards } from './corpus.js?v=5aab9d9b3f';
-import { go } from './nav.js?v=5aab9d9b3f';
-import { stagger } from './motion.js?v=5aab9d9b3f';
-import { contextMenu, toast } from './ui.js?v=5aab9d9b3f';
-import { download } from './util.js?v=5aab9d9b3f';
+import { h, clear, fmtRel, previewOf } from './util.js?v=44ebe426f1';
+import { icon } from './icons.js?v=44ebe426f1';
+import { state, cardTitle, SEV_SHORT } from './store.js?v=44ebe426f1';
+import { allCards } from './corpus.js?v=44ebe426f1';
+import { go } from './nav.js?v=44ebe426f1';
+import { stagger } from './motion.js?v=44ebe426f1';
+import { contextMenu, toast } from './ui.js?v=44ebe426f1';
+import { download } from './util.js?v=44ebe426f1';
 
 const WEEK = 7 * 86400000;
 const WINDOW = 14 * 86400000;      // "lately" vs "before that"

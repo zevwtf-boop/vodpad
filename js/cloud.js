@@ -6,7 +6,7 @@
    what's in the database can't be walked back to a password.
 */
 
-import { mediaNamesOf } from './api.js?v=5aab9d9b3f';
+import { mediaNamesOf } from './api.js?v=44ebe426f1';
 
 const KEY_TOKEN = 'vodpad:token';
 const KEY_USER = 'vodpad:user';
@@ -265,7 +265,7 @@ export const cloudApi = {
   videos: async () => ({ roots: [], files: [], local: true }),
   // no disk to cache the island on, so point straight at the api and let the
   // browser's http cache carry it. the worker never proxies this.
-  lootmap: async () => (await import('./api.js?v=5aab9d9b3f')).fetchIslandDirect(),
+  lootmap: async () => (await import('./api.js?v=44ebe426f1')).fetchIslandDirect(),
   reveal: async () => ({ ok: false }),
   quit: async () => ({ ok: false }),
 

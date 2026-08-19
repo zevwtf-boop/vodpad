@@ -4,11 +4,11 @@
    your text — no stray spans left behind in the saved html.
 */
 
-import { $, $$, h, clear, debounce } from './util.js?v=5aab9d9b3f';
-import { icon } from './icons.js?v=5aab9d9b3f';
-import { state, quietly, commit } from './store.js?v=5aab9d9b3f';
-import { pushLayer, dropLayer, toast } from './ui.js?v=5aab9d9b3f';
-import { popIn, popOut } from './motion.js?v=5aab9d9b3f';
+import { $, $$, h, clear, debounce } from './util.js?v=44ebe426f1';
+import { icon } from './icons.js?v=44ebe426f1';
+import { state, quietly, commit } from './store.js?v=44ebe426f1';
+import { pushLayer, dropLayer, toast } from './ui.js?v=44ebe426f1';
+import { popIn, popOut } from './motion.js?v=44ebe426f1';
 
 let bar = null;
 let hits = [];
@@ -125,7 +125,7 @@ function step(delta) {
   const hit = hits[at];
   if (supported) CSS.highlights.set('vodfind-now', new Highlight(hit.range));
   const host = hit.host?.closest('.blk, .sidenote, .freebox, .img-block') || hit.host;
-  import('./page.js?v=5aab9d9b3f').then((pg) => pg.ensureVisible(host, { margin: 140 }));
+  import('./page.js?v=44ebe426f1').then((pg) => pg.ensureVisible(host, { margin: 140 }));
   paintCount();
 }
 

@@ -5,13 +5,13 @@
    editable, and it is what notion/craft do too.
 */
 
-import { h, $, $$, uid, clamp, stripHtml, sanitizeInline, modKey, debounce } from './util.js?v=5aab9d9b3f';
-import { icon } from './icons.js?v=5aab9d9b3f';
-import { state, card, commit, quietly, syncTags, bus, undo } from './store.js?v=5aab9d9b3f';
-import { contextMenu, toast } from './ui.js?v=5aab9d9b3f';
-import { animate, EASE } from './motion.js?v=5aab9d9b3f';
-import { renderImageBlock } from './images.js?v=5aab9d9b3f';
-import { openSlashMenu, closeSlashMenu, slashOpen } from './toolbar.js?v=5aab9d9b3f';
+import { h, $, $$, uid, clamp, stripHtml, sanitizeInline, modKey, debounce } from './util.js?v=44ebe426f1';
+import { icon } from './icons.js?v=44ebe426f1';
+import { state, card, commit, quietly, syncTags, bus, undo } from './store.js?v=44ebe426f1';
+import { contextMenu, toast } from './ui.js?v=44ebe426f1';
+import { animate, EASE } from './motion.js?v=44ebe426f1';
+import { renderImageBlock } from './images.js?v=44ebe426f1';
+import { openSlashMenu, closeSlashMenu, slashOpen } from './toolbar.js?v=44ebe426f1';
 
 export const TEXT_TYPES = new Set(['p', 'h1', 'h2', 'h3', 'quote', 'callout', 'ul', 'ol', 'todo']);
 export const LIST_TYPES = new Set(['ul', 'ol', 'todo']);
@@ -159,7 +159,7 @@ function subPageEl(block) {
   return h('button.subpage-block', {
     on: {
       click: async (e) => {
-        const { openCardPage } = await import('./nav.js?v=5aab9d9b3f');
+        const { openCardPage } = await import('./nav.js?v=44ebe426f1');
         openCardPage(kid.id, e.currentTarget);
       },
     },
@@ -404,7 +404,7 @@ export function insertBlock(afterId, patch = {}, focus = true) {
 
 /** blocks can be an end of a wire; dropping one has to tidy those up */
 async function tidyWires() {
-  try { (await import('./wires.js?v=5aab9d9b3f')).pruneWires(); } catch { /* no wires module, fine */ }
+  try { (await import('./wires.js?v=44ebe426f1')).pruneWires(); } catch { /* no wires module, fine */ }
 }
 
 export function deleteBlock(id, { focusPrev = true } = {}) {
@@ -862,7 +862,7 @@ async function onPaste(e, body, blockId) {
   if (imageItem) {
     e.preventDefault();
     const file = imageItem.getAsFile();
-    const { insertImageFromFile } = await import('./images.js?v=5aab9d9b3f');
+    const { insertImageFromFile } = await import('./images.js?v=44ebe426f1');
     insertImageFromFile(file, blockId);
     return;
   }

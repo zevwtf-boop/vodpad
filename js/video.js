@@ -1,12 +1,12 @@
 /* the video panel — deliberately optional. every note feature works with this
    closed; it just saves you alt-tabbing while you review. */
 
-import { $, h, clear, clamp, fmtClock, fmtBytes, parseClock } from './util.js?v=5aab9d9b3f';
-import { icon } from './icons.js?v=5aab9d9b3f';
-import { api, videoUrl } from './api.js?v=5aab9d9b3f';
-import { state, card, commit, quietly, bus } from './store.js?v=5aab9d9b3f';
-import { toast, contextMenu, promptDialog, popover, closePopover } from './ui.js?v=5aab9d9b3f';
-import { animate, EASE } from './motion.js?v=5aab9d9b3f';
+import { $, h, clear, clamp, fmtClock, fmtBytes, parseClock } from './util.js?v=44ebe426f1';
+import { icon } from './icons.js?v=44ebe426f1';
+import { api, videoUrl } from './api.js?v=44ebe426f1';
+import { state, card, commit, quietly, bus } from './store.js?v=44ebe426f1';
+import { toast, contextMenu, promptDialog, popover, closePopover } from './ui.js?v=44ebe426f1';
+import { animate, EASE } from './motion.js?v=44ebe426f1';
 
 let panel = null;
 let media = null;          // the <video> element when a local file is loaded
@@ -391,7 +391,7 @@ export function currentTime() {
 
 export async function insertTimestamp(blockId) {
   const t = currentTime();
-  const ed = await import('./editor.js?v=5aab9d9b3f');
+  const ed = await import('./editor.js?v=44ebe426f1');
   const body = ed.bodyOf(blockId) || ed.currentBody();
   if (!body) return;
   body.focus();
@@ -410,7 +410,7 @@ export async function insertTimestamp(blockId) {
 
 export async function stampNote() {
   if (!state.board || state.route.name !== 'page') return;
-  const ed = await import('./editor.js?v=5aab9d9b3f');
+  const ed = await import('./editor.js?v=44ebe426f1');
   const c = card(state.cardId);
   const last = ed.currentBlockId() || c.blocks.at(-1)?.id;
   const block = ed.insertBlock(last, { type: 'p' }, true);
@@ -434,8 +434,8 @@ export async function grabFrame() {
   const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
   if (!blob) { toast('could not grab that frame', { kind: 'error' }); return; }
   const file = new File([blob], `frame-${Math.floor(currentTime())}.png`, { type: 'image/png' });
-  const { insertImageFromFile } = await import('./images.js?v=5aab9d9b3f');
-  const ed = await import('./editor.js?v=5aab9d9b3f');
+  const { insertImageFromFile } = await import('./images.js?v=44ebe426f1');
+  const ed = await import('./editor.js?v=44ebe426f1');
   const block = await insertImageFromFile(file, ed.currentBlockId());
   if (block) {
     const t = currentTime();
@@ -507,7 +507,7 @@ export async function pickFrame() {
   // loops fight over media.currentTime and every thumbnail is the wrong frame
   let run = 0;
 
-  const { openModal } = await import('./ui.js?v=5aab9d9b3f');
+  const { openModal } = await import('./ui.js?v=44ebe426f1');
 
   const draw = async () => {
     const mine = ++run;
@@ -576,8 +576,8 @@ export async function pickFrame() {
 
   if (!blob) { toast('could not grab that frame', { kind: 'error' }); return; }
   const file = new File([blob], `frame-${Math.floor(picked)}.png`, { type: 'image/png' });
-  const { insertImageFromFile } = await import('./images.js?v=5aab9d9b3f');
-  const ed = await import('./editor.js?v=5aab9d9b3f');
+  const { insertImageFromFile } = await import('./images.js?v=44ebe426f1');
+  const ed = await import('./editor.js?v=44ebe426f1');
   const block = await insertImageFromFile(file, ed.currentBlockId());
   if (block) {
     commit('frame time', (b) => {

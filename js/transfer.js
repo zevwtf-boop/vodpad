@@ -7,11 +7,11 @@
    aren't using sync.
 */
 
-import { h, download, stripHtml } from './util.js?v=5aab9d9b3f';
-import { api, mediaUrl, mode } from './api.js?v=5aab9d9b3f';
-import { state, refreshBoards, cardTitle } from './store.js?v=5aab9d9b3f';
-import { toast, openModal } from './ui.js?v=5aab9d9b3f';
-import { icon } from './icons.js?v=5aab9d9b3f';
+import { h, download, stripHtml } from './util.js?v=44ebe426f1';
+import { api, mediaUrl, mode } from './api.js?v=44ebe426f1';
+import { state, refreshBoards, cardTitle } from './store.js?v=44ebe426f1';
+import { toast, openModal } from './ui.js?v=44ebe426f1';
+import { icon } from './icons.js?v=44ebe426f1';
 
 const KIND = 'vodpad-session';
 
