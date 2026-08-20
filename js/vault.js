@@ -12,7 +12,7 @@
    installed something on your machine.
 */
 
-import { mediaNamesOf } from './api.js?v=13c601f470';
+import { mediaNamesOf } from './api.js?v=7cc5d8f531';
 
 const DB_NAME = 'vodpad-web';
 const STORE = 'kv';
@@ -381,7 +381,7 @@ export const localApi = {
   videos: async () => ({ roots: [], files: [], local: true }),
   // same as cloud: nothing local to cache into, so the api url goes straight
   // into the <img> and the browser cache does the work
-  lootmap: async () => (await import('./api.js?v=13c601f470')).fetchIslandDirect(),
+  lootmap: async () => (await import('./api.js?v=7cc5d8f531')).fetchIslandDirect(),
   reveal: async () => ({ ok: false }),
   quit: async () => ({ ok: false }),
 
@@ -443,7 +443,7 @@ export function localMediaUrl(boardId, src) {
 }
 
 // hand the resolver to api.js so mediaUrl() stays synchronous everywhere else
-import('./api.js?v=13c601f470').then((m) => m.registerStaticMedia(localMediaUrl));
+import('./api.js?v=7cc5d8f531').then((m) => m.registerStaticMedia(localMediaUrl));
 
 /* ---------------------------------------------------------------- backups
 

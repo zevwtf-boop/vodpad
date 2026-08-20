@@ -6,7 +6,7 @@
    same thing — the tab is what you scrub with, the export is what you hand to
    whoever is cutting the video, and they must not disagree. */
 
-import { stripHtml, fmtClock } from './util.js?v=13c601f470';
+import { stripHtml, fmtClock } from './util.js?v=7cc5d8f531';
 
 export const CHIP_RE = /<span[^>]*\bdata-t="([\d.]+)"[^>]*>[\s\S]*?<\/span>/gi;
 

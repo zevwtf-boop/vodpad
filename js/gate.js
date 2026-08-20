@@ -8,17 +8,17 @@
    browser and only the derived key crosses the wire, on the way in and on the
    way up. */
 
-import { $, h, clear, debounce } from './util.js?v=13c601f470';
-import { icon } from './icons.js?v=13c601f470';
-import { signIn, signOut as backendSignOut, mode, canSignUp, checkSignup, signUp, resetPassword } from './api.js?v=13c601f470';
-import { animate, EASE } from './motion.js?v=13c601f470';
+import { $, h, clear, debounce } from './util.js?v=7cc5d8f531';
+import { icon } from './icons.js?v=7cc5d8f531';
+import { signIn, signOut as backendSignOut, mode, canSignUp, checkSignup, signUp, resetPassword } from './api.js?v=7cc5d8f531';
+import { animate, EASE } from './motion.js?v=7cc5d8f531';
 
 export function requireLogin() {
   return new Promise(async (resolve) => {
     let names = [];
     if (mode === 'vault') {
       try {
-        const vault = await import('./vault.js?v=13c601f470');
+        const vault = await import('./vault.js?v=7cc5d8f531');
         await vault.loadUsers();
         names = vault.userNames();
       } catch { /* shown below */ }

@@ -8,12 +8,12 @@
    touches your text.
 */
 
-import { $, $$, h, clear, uid } from './util.js?v=13c601f470';
-import { icon } from './icons.js?v=13c601f470';
-import { state, card, commit, bus, undo, redo } from './store.js?v=13c601f470';
-import { toast } from './ui.js?v=13c601f470';
-import { FILLS, KINDS, shapePen, setShapePen, startDrawShape, addShapeAt } from './shapes.js?v=13c601f470';
-import { startWire, wiring, cancelWire } from './wires.js?v=13c601f470';
+import { $, $$, h, clear, uid } from './util.js?v=7cc5d8f531';
+import { icon } from './icons.js?v=7cc5d8f531';
+import { state, card, commit, bus, undo, redo } from './store.js?v=7cc5d8f531';
+import { toast } from './ui.js?v=7cc5d8f531';
+import { FILLS, KINDS, shapePen, setShapePen, startDrawShape, addShapeAt } from './shapes.js?v=7cc5d8f531';
+import { startWire, wiring, cancelWire } from './wires.js?v=7cc5d8f531';
 
 export const PEN_COLOURS = [
   ['chalk', 'var(--text)'],
@@ -165,7 +165,7 @@ function rail() {
 
 async function pickTool(id) {
   if (id === 'picture') {
-    const { pickImageFile } = await import('./images.js?v=13c601f470');
+    const { pickImageFile } = await import('./images.js?v=7cc5d8f531');
     const blocks = card(state.cardId)?.blocks || [];
     pickImageFile(blocks.at(-1)?.id);
     return;
@@ -196,11 +196,11 @@ function optionsStrip() {
 
 function zoomPill() {
   return h('div.wb-zoom',
-    h('button.wb-zoom-btn', { tip: 'zoom out · ctrl+-', on: { click: async () => (await import('./page.js?v=13c601f470')).setPageZoom((await import('./page.js?v=13c601f470')).pageZoom() * 0.9) } }, icon('minus', { size: 15 })),
-    h('button.wb-zoom-val#wb-zoom-val', { tip: 'back to 100% · ctrl+0', text: '100%', on: { click: async () => (await import('./page.js?v=13c601f470')).resetPageView() } }),
-    h('button.wb-zoom-btn', { tip: 'zoom in · ctrl++', on: { click: async () => (await import('./page.js?v=13c601f470')).setPageZoom((await import('./page.js?v=13c601f470')).pageZoom() * 1.1) } }, icon('plus', { size: 15 })),
+    h('button.wb-zoom-btn', { tip: 'zoom out · ctrl+-', on: { click: async () => (await import('./page.js?v=7cc5d8f531')).setPageZoom((await import('./page.js?v=7cc5d8f531')).pageZoom() * 0.9) } }, icon('minus', { size: 15 })),
+    h('button.wb-zoom-val#wb-zoom-val', { tip: 'back to 100% · ctrl+0', text: '100%', on: { click: async () => (await import('./page.js?v=7cc5d8f531')).resetPageView() } }),
+    h('button.wb-zoom-btn', { tip: 'zoom in · ctrl++', on: { click: async () => (await import('./page.js?v=7cc5d8f531')).setPageZoom((await import('./page.js?v=7cc5d8f531')).pageZoom() * 1.1) } }, icon('plus', { size: 15 })),
     h('span.wb-zoom-sep'),
-    h('button.wb-zoom-btn', { tip: 'fit everything on the board on screen', on: { click: async () => (await import('./page.js?v=13c601f470')).fitBoard() } }, icon('fit', { size: 15 })),
+    h('button.wb-zoom-btn', { tip: 'fit everything on the board on screen', on: { click: async () => (await import('./page.js?v=7cc5d8f531')).fitBoard() } }, icon('fit', { size: 15 })),
   );
 }
 
@@ -276,7 +276,7 @@ function bindDrawing(viewport) {
     // lose its own pointerup
     if (boxTool()) { startDrawShape(e, tool === 'frame' ? 'frame' : null); return; }
 
-    const { toPlane } = await import('./page.js?v=13c601f470');
+    const { toPlane } = await import('./page.js?v=7cc5d8f531');
     const p = toPlane(e.clientX, e.clientY);
 
     if (tool === 'sticky') { dropSticky(p); return; }
@@ -327,7 +327,7 @@ function startErase(viewport) {
   const cardId = state.cardId;
   const gone = new Set();
   const hit = async (ev) => {
-    const { toPlane } = await import('./page.js?v=13c601f470');
+    const { toPlane } = await import('./page.js?v=7cc5d8f531');
     const p = toPlane(ev.clientX, ev.clientY);
     for (const s of inkOf()) {
       if (gone.has(s.id)) continue;

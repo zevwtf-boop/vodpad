@@ -1,13 +1,13 @@
 /* the annotation studio — vector marks on top of a screenshot, never baked
    into the pixels, so every arrow stays editable and stays sharp. */
 
-import { h, $, clear, uid, clamp } from './util.js?v=13c601f470';
-import { icon } from './icons.js?v=13c601f470';
-import { mediaUrl } from './api.js?v=13c601f470';
-import { state, card, commit } from './store.js?v=13c601f470';
-import { pushLayer, dropLayer, toast } from './ui.js?v=13c601f470';
-import { animate, EASE } from './motion.js?v=13c601f470';
-import { paintStrokes, refreshImage, addPin } from './images.js?v=13c601f470';
+import { h, $, clear, uid, clamp } from './util.js?v=7cc5d8f531';
+import { icon } from './icons.js?v=7cc5d8f531';
+import { mediaUrl } from './api.js?v=7cc5d8f531';
+import { state, card, commit } from './store.js?v=7cc5d8f531';
+import { pushLayer, dropLayer, toast } from './ui.js?v=7cc5d8f531';
+import { animate, EASE } from './motion.js?v=7cc5d8f531';
+import { paintStrokes, refreshImage, addPin } from './images.js?v=7cc5d8f531';
 
 const TOOLS = [
   ['arrow', 'arrow', 'arrow · a'],

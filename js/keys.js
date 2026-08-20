@@ -1,10 +1,10 @@
 /* global shortcuts. anything typed inside a contenteditable is left alone
    unless it carries a modifier. */
 
-import { modKey } from './util.js?v=13c601f470';
-import { state, undo, redo, saveNow } from './store.js?v=13c601f470';
-import { closeTopLayer, toast } from './ui.js?v=13c601f470';
-import { back, toggleMap, go } from './nav.js?v=13c601f470';
+import { modKey } from './util.js?v=7cc5d8f531';
+import { state, undo, redo, saveNow } from './store.js?v=7cc5d8f531';
+import { closeTopLayer, toast } from './ui.js?v=7cc5d8f531';
+import { back, toggleMap, go } from './nav.js?v=7cc5d8f531';
 
 const isTyping = () => {
   const el = document.activeElement;
@@ -16,11 +16,11 @@ export function installKeys() {
     // escape always peels one layer off
     if (e.key === 'Escape') {
       if (closeTopLayer()) { e.preventDefault(); return; }
-      const shapes = await import('./shapes.js?v=13c601f470');
+      const shapes = await import('./shapes.js?v=7cc5d8f531');
       if (shapes.clearShapeSelection()) { e.preventDefault(); return; }
-      const ed = await import('./editor.js?v=13c601f470');
+      const ed = await import('./editor.js?v=7cc5d8f531');
       if (ed.clearBlockSelection()) { e.preventDefault(); return; }
-      const img = await import('./images.js?v=13c601f470');
+      const img = await import('./images.js?v=7cc5d8f531');
       if (img.imagePicked()) { img.clearImageSelection(); e.preventDefault(); return; }
       if (isTyping()) { document.activeElement.blur(); return; }
       e.preventDefault();
@@ -31,8 +31,8 @@ export function installKeys() {
     const mod = modKey(e);
     const key = e.key.toLowerCase();
 
-    if (mod && key === 'k') { e.preventDefault(); (await import('./search.js?v=13c601f470')).openPalette(); return; }
-    if (mod && key === 'f') { e.preventDefault(); (await import('./search.js?v=13c601f470')).openPalette({ scope: 'board' }); return; }
+    if (mod && key === 'k') { e.preventDefault(); (await import('./search.js?v=7cc5d8f531')).openPalette(); return; }
+    if (mod && key === 'f') { e.preventDefault(); (await import('./search.js?v=7cc5d8f531')).openPalette({ scope: 'board' }); return; }
     if (mod && key === 's') { e.preventDefault(); saveNow(); toast('saved', { kind: 'ok', ms: 1200 }); return; }
 
     if (mod && key === 'z' && !e.shiftKey) {
@@ -59,36 +59,36 @@ export function installKeys() {
     if (mod && key === 'b' && e.shiftKey === false && !isTyping()) { e.preventDefault(); toggleMap(); return; }
     if (mod && key === 'b' && isTyping()) return;                     // bold, handled by the editor
     if (mod && e.shiftKey && key === 'b') { e.preventDefault(); toggleMap(); return; }
-    if (mod && key === 'r') { e.preventDefault(); (await import('./readmode.js?v=13c601f470')).openReader(); return; }
-    if (mod && e.shiftKey && key === 'v') { e.preventDefault(); (await import('./video.js?v=13c601f470')).toggleVideo(); return; }
+    if (mod && key === 'r') { e.preventDefault(); (await import('./readmode.js?v=7cc5d8f531')).openReader(); return; }
+    if (mod && e.shiftKey && key === 'v') { e.preventDefault(); (await import('./video.js?v=7cc5d8f531')).toggleVideo(); return; }
     if (mod && key === '0') {
       e.preventDefault();
-      if (state.route.name === 'board') (await import('./canvas.js?v=13c601f470')).fit();
-      else (await import('./page.js?v=13c601f470')).resetPageZoom();
+      if (state.route.name === 'board') (await import('./canvas.js?v=7cc5d8f531')).fit();
+      else (await import('./page.js?v=7cc5d8f531')).resetPageZoom();
       return;
     }
-    if (mod && (key === '=' || key === '+')) { e.preventDefault(); const pg = await import('./page.js?v=13c601f470'); pg.setPageZoom(pg.pageZoom() * 1.1); return; }
-    if (mod && key === '-') { e.preventDefault(); const pg = await import('./page.js?v=13c601f470'); pg.setPageZoom(pg.pageZoom() * 0.909); return; }
+    if (mod && (key === '=' || key === '+')) { e.preventDefault(); const pg = await import('./page.js?v=7cc5d8f531'); pg.setPageZoom(pg.pageZoom() * 1.1); return; }
+    if (mod && key === '-') { e.preventDefault(); const pg = await import('./page.js?v=7cc5d8f531'); pg.setPageZoom(pg.pageZoom() * 0.909); return; }
 
-    if (mod && key === 'h') { e.preventDefault(); (await import('./find.js?v=13c601f470')).openFind(String(getSelection() || '').slice(0, 60)); return; }
-    if (mod && key === '\\') { e.preventDefault(); (await import('./page.js?v=13c601f470')).toggleSidebar(); return; }
-    if (mod && e.shiftKey && key === 'f') { e.preventDefault(); (await import('./page.js?v=13c601f470')).toggleFocusMode(); return; }
-    if (mod && key === 'l') { e.preventDefault(); (await import('./anchors.js?v=13c601f470')).startAnchorPick(); return; }
-    if (mod && key === 'm') { e.preventDefault(); (await import('./page.js?v=13c601f470')).addSidenoteFromSelection(); return; }
+    if (mod && key === 'h') { e.preventDefault(); (await import('./find.js?v=7cc5d8f531')).openFind(String(getSelection() || '').slice(0, 60)); return; }
+    if (mod && key === '\\') { e.preventDefault(); (await import('./page.js?v=7cc5d8f531')).toggleSidebar(); return; }
+    if (mod && e.shiftKey && key === 'f') { e.preventDefault(); (await import('./page.js?v=7cc5d8f531')).toggleFocusMode(); return; }
+    if (mod && key === 'l') { e.preventDefault(); (await import('./anchors.js?v=7cc5d8f531')).startAnchorPick(); return; }
+    if (mod && key === 'm') { e.preventDefault(); (await import('./page.js?v=7cc5d8f531')).addSidenoteFromSelection(); return; }
     if (mod && e.shiftKey && key === 't') {
       e.preventDefault();
-      (await import('./shapes.js?v=13c601f470')).addShape({ kind: 'rect', tone: 'text', align: 'left', valign: 'top', w: 240, h: 60 });
+      (await import('./shapes.js?v=7cc5d8f531')).addShape({ kind: 'rect', tone: 'text', align: 'left', valign: 'top', w: 240, h: 60 });
       return;
     }
 
     if (mod && key === 'd') {
-      const ed = await import('./editor.js?v=13c601f470');
+      const ed = await import('./editor.js?v=7cc5d8f531');
       const id = ed.currentBlockId();
       if (id) { e.preventDefault(); ed.duplicateBlock(id); }
       return;
     }
     if (mod && e.key === 'Backspace') {
-      const ed = await import('./editor.js?v=13c601f470');
+      const ed = await import('./editor.js?v=7cc5d8f531');
       const id = ed.currentBlockId();
       if (id) { e.preventDefault(); ed.deleteBlock(id); }
       return;
@@ -97,25 +97,25 @@ export function installKeys() {
     if (!isTyping()) {
       if (['1', '2', '3', '4'].includes(e.key)) {
         e.preventDefault();
-        const { setSeverity } = await import('./page.js?v=13c601f470');
+        const { setSeverity } = await import('./page.js?v=7cc5d8f531');
         setSeverity(state.cardId, Number(e.key) - 1);
         return;
       }
       if (key === 'c') {
         e.preventDefault();
-        const w = await import('./wires.js?v=13c601f470');
+        const w = await import('./wires.js?v=7cc5d8f531');
         if (w.wiring()) w.cancelWire(); else w.startWire();
         return;
       }
-      if (key === 't') { e.preventDefault(); (await import('./video.js?v=13c601f470')).stampNote(); return; }
+      if (key === 't') { e.preventDefault(); (await import('./video.js?v=7cc5d8f531')).stampNote(); return; }
       if (key === 's') {
         e.preventDefault();
-        const vid = await import('./video.js?v=13c601f470');
+        const vid = await import('./video.js?v=7cc5d8f531');
         // shift+s when you noticed the mistake half a second too late
         if (e.shiftKey) vid.pickFrame(); else vid.grabFrame();
         return;
       }
-      if (key === 'v') { e.preventDefault(); (await import('./video.js?v=13c601f470')).toggleVideo(); return; }
+      if (key === 'v') { e.preventDefault(); (await import('./video.js?v=7cc5d8f531')).toggleVideo(); return; }
     }
   });
 }

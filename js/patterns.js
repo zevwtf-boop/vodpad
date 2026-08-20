@@ -12,14 +12,14 @@
    corpus.js already holds every session for the drill list and the global
    search, so this reuses that rather than fetching the world again. */
 
-import { h, clear, fmtRel, previewOf } from './util.js?v=13c601f470';
-import { icon } from './icons.js?v=13c601f470';
-import { state, cardTitle, SEV_SHORT } from './store.js?v=13c601f470';
-import { allCards } from './corpus.js?v=13c601f470';
-import { go } from './nav.js?v=13c601f470';
-import { stagger } from './motion.js?v=13c601f470';
-import { contextMenu, toast } from './ui.js?v=13c601f470';
-import { download } from './util.js?v=13c601f470';
+import { h, clear, fmtRel, previewOf } from './util.js?v=7cc5d8f531';
+import { icon } from './icons.js?v=7cc5d8f531';
+import { state, cardTitle, SEV_SHORT } from './store.js?v=7cc5d8f531';
+import { allCards } from './corpus.js?v=7cc5d8f531';
+import { go } from './nav.js?v=7cc5d8f531';
+import { stagger } from './motion.js?v=7cc5d8f531';
+import { contextMenu, toast } from './ui.js?v=7cc5d8f531';
+import { download } from './util.js?v=7cc5d8f531';
 
 const WEEK = 7 * 86400000;
 const WINDOW = 14 * 86400000;      // "lately" vs "before that"

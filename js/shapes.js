@@ -21,15 +21,15 @@
    use, so everything pans and zooms together.
 */
 
-import { $, $$, h, clear, uid, clamp, rafThrottle, stripHtml } from './util.js?v=13c601f470';
-import { icon } from './icons.js?v=13c601f470';
-import { mediaUrl } from './api.js?v=13c601f470';
-import { state, card, commit, bus, makeCard } from './store.js?v=13c601f470';
-import { contextMenu, toast } from './ui.js?v=13c601f470';
-import { animate, EASE } from './motion.js?v=13c601f470';
-import { paintWires, addWire, wiring, ghostWire, clearGhost, boxOfEl, sidePoint } from './wires.js?v=13c601f470';
-import { activeTool, setTool, STICKY_COLOURS } from './whiteboard.js?v=13c601f470';
-import { openCardPage } from './nav.js?v=13c601f470';
+import { $, $$, h, clear, uid, clamp, rafThrottle, stripHtml } from './util.js?v=7cc5d8f531';
+import { icon } from './icons.js?v=7cc5d8f531';
+import { mediaUrl } from './api.js?v=7cc5d8f531';
+import { state, card, commit, bus, makeCard } from './store.js?v=7cc5d8f531';
+import { contextMenu, toast } from './ui.js?v=7cc5d8f531';
+import { animate, EASE } from './motion.js?v=7cc5d8f531';
+import { paintWires, addWire, wiring, ghostWire, clearGhost, boxOfEl, sidePoint } from './wires.js?v=7cc5d8f531';
+import { activeTool, setTool, STICKY_COLOURS } from './whiteboard.js?v=7cc5d8f531';
+import { openCardPage } from './nav.js?v=7cc5d8f531';
 
 /* ---------------------------------------------------------------- the paints
 
@@ -996,7 +996,7 @@ export async function putImageInShape(id, file) {
   paintWires();
 
   try {
-    const { uploadImage } = await import('./images.js?v=13c601f470');
+    const { uploadImage } = await import('./images.js?v=7cc5d8f531');
     const src = await uploadImage(file);
     editShapes('picture in a box', (list) => {
       const t = list.find((x) => x.id === id);
@@ -1026,7 +1026,7 @@ export async function imageShapeAt(planePoint, file) {
   placeShape(s, { label: 'picture', edit: false });
 
   try {
-    const { uploadImage } = await import('./images.js?v=13c601f470');
+    const { uploadImage } = await import('./images.js?v=7cc5d8f531');
     const src = await uploadImage(file);
     editShapes('picture', (list) => {
       const t = list.find((x) => x.id === s.id);
@@ -1351,7 +1351,7 @@ export function shapeMenu(id, x, y) {
     } : null,
     s.src ? {
       label: 'keep it as a preset', icon: 'plus', hint: 'every session',
-      onPick: async () => (await import('./presets.js?v=13c601f470')).addPresetFromSrc(s.src, stripHtml(s.html || '') || 'my picture'),
+      onPick: async () => (await import('./presets.js?v=7cc5d8f531')).addPresetFromSrc(s.src, stripHtml(s.html || '') || 'my picture'),
     } : null,
     s.src ? { label: 'take the picture out', icon: 'close', onPick: () => patchSelection('remove picture', { src: null, pending: null, nat: null }) } : null,
     { sep: true },
