@@ -157,6 +157,14 @@
   position: absolute; left: 0; top: 0;
   transform-origin: 0 0;
   will-change: transform;
+  /* the paper is what used to give the plane a size. a page with the paper
+     turned off has nothing in the flow at all, and the plane collapsed to
+     0x0 — which silently took the wire layer and the guide layer with it,
+     because an svg sized 0x0 paints nothing. everything on the plane is
+     absolutely positioned, so a floor costs nothing and keeps those layers
+     real. */
+  min-width: 2600px;
+  min-height: 1800px;
 }
 
 .page-free { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 6; }

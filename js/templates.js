@@ -10,10 +10,10 @@
    there too or it would vanish on save. cloud and vault store settings as
    free-form json. */
 
-import { h, uid, clear } from './util.js?v=44ebe426f1';
-import { icon } from './icons.js?v=44ebe426f1';
-import { state, setSetting } from './store.js?v=44ebe426f1';
-import { openModal, toast, confirmDialog, promptDialog, contextMenu } from './ui.js?v=44ebe426f1';
+import { h, uid, clear } from './util.js?v=d258d51ea6';
+import { icon } from './icons.js?v=d258d51ea6';
+import { state, setSetting } from './store.js?v=d258d51ea6';
+import { openModal, toast, confirmDialog, promptDialog, contextMenu } from './ui.js?v=d258d51ea6';
 
 const p = (html) => ({ type: 'p', html });
 const h2 = (html) => ({ type: 'h2', html });
@@ -130,8 +130,9 @@ export async function askForNewSession() {
   const title = h('input.field', { value: suggested, placeholder: 'e.g. ranked trios — 09 aug', spellcheck: false });
 
   const list = allTemplates();
+  const fallback = list.some((t) => t.id === 'paper') ? 'paper' : (list[0]?.id || 'blank');
   let picked = state.settings.lastTemplate && list.some((t) => t.id === state.settings.lastTemplate)
-    ? state.settings.lastTemplate : 'blank';
+    ? state.settings.lastTemplate : fallback;
 
   const choices = h('div.tpl-choices');
   const paint = () => {

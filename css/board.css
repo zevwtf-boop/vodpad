@@ -51,8 +51,15 @@
   background: color-mix(in srgb, var(--bg-1) 45%, transparent);
 }
 
-/* a text box is a box with the box turned off */
+/* a text box is a box with the box turned off. an empty one would be
+   invisible, so it keeps a hairline until there is something written in it —
+   you cannot drag, select or delete what you cannot see. */
 .shape.plain { border-color: transparent; background: none; box-shadow: none; }
+.shape.plain.is-empty {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--line) 85%, transparent);
+}
+.shape.plain:hover { border-style: dashed; border-color: var(--line); }
 
 .shape-art { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
@@ -296,3 +303,26 @@ body[data-grid="lines"] .page-viewport {
 
 .gear-restore { display: flex; flex-wrap: wrap; gap: 8px; }
 .gear-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--faint); }
+
+/* ---------------- a plane with nothing on it ---------------- */
+
+.plane-hint {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  pointer-events: none;
+  z-index: 12;
+}
+.plane-hint-card {
+  pointer-events: auto;
+  max-width: 340px;
+  display: grid; gap: 8px;
+  padding: 18px 20px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-1);
+  box-shadow: var(--shadow-2);
+  text-align: center;
+}
+.plane-hint-title { font-size: var(--t-1); font-weight: 600; color: var(--text); }
+.plane-hint-line { font-size: 12px; line-height: 1.5; color: var(--faint); }
+.plane-hint-acts { display: flex; gap: 8px; justify-content: center; margin-top: 4px; flex-wrap: wrap; }

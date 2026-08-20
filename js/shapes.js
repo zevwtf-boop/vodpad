@@ -21,15 +21,15 @@
    use, so everything pans and zooms together.
 */
 
-import { $, $$, h, clear, uid, clamp, rafThrottle, stripHtml } from './util.js?v=44ebe426f1';
-import { icon } from './icons.js?v=44ebe426f1';
-import { mediaUrl } from './api.js?v=44ebe426f1';
-import { state, card, commit, bus, makeCard } from './store.js?v=44ebe426f1';
-import { contextMenu, toast } from './ui.js?v=44ebe426f1';
-import { animate, EASE } from './motion.js?v=44ebe426f1';
-import { paintWires, addWire, wiring, ghostWire, clearGhost, boxOfEl, sidePoint } from './wires.js?v=44ebe426f1';
-import { activeTool, setTool, STICKY_COLOURS } from './whiteboard.js?v=44ebe426f1';
-import { openCardPage } from './nav.js?v=44ebe426f1';
+import { $, $$, h, clear, uid, clamp, rafThrottle, stripHtml } from './util.js?v=d258d51ea6';
+import { icon } from './icons.js?v=d258d51ea6';
+import { mediaUrl } from './api.js?v=d258d51ea6';
+import { state, card, commit, bus, makeCard } from './store.js?v=d258d51ea6';
+import { contextMenu, toast } from './ui.js?v=d258d51ea6';
+import { animate, EASE } from './motion.js?v=d258d51ea6';
+import { paintWires, addWire, wiring, ghostWire, clearGhost, boxOfEl, sidePoint } from './wires.js?v=d258d51ea6';
+import { activeTool, setTool, STICKY_COLOURS } from './whiteboard.js?v=d258d51ea6';
+import { openCardPage } from './nav.js?v=d258d51ea6';
 
 /* ---------------------------------------------------------------- the paints
 
@@ -196,6 +196,10 @@ export function renderShapes() {
   if (!c) return;
   for (const s of ordered(shapesOf(c))) layer.append(shapeEl(s));
   layer.append(guideLayer());
+  // page.js paints the "nothing here yet" card on an empty plane; it has to
+  // come and go with the boxes, not only on a full re-render
+  const hint = document.querySelector('.plane-hint');
+  if (hint) hint.hidden = shapesOf(c).length > 0;
   syncZoom();
   paintSelection();
 }
@@ -275,7 +279,15 @@ function shapeEl(s) {
 
   const el = h('div.shape', {
     data: { id: s.id, kind: s.kind },
-    class: [s.locked ? 'locked' : '', editing ? 'editing' : '', (s.src || s.pending) ? 'has-pic' : '', s.tone === 'text' ? 'plain' : ''].filter(Boolean).join(' '),
+    class: [
+      s.locked ? 'locked' : '',
+      editing ? 'editing' : '',
+      (s.src || s.pending) ? 'has-pic' : '',
+      s.tone === 'text' ? 'plain' : '',
+      // a text box turns its own box off, so an empty one has nothing to see
+      // at all — it gets a hairline back until there is something in it
+      (!stripHtml(s.html || '').trim() && !s.src && !s.pending) ? 'is-empty' : '',
+    ].filter(Boolean).join(' '),
     style: {
       left: `${s.x}px`, top: `${s.y}px`, width: `${s.w}px`, height: `${s.h}px`,
       zIndex: String(s.kind === 'frame' ? 1 : 10 + (s.z || 0)),
@@ -283,7 +295,7 @@ function shapeEl(s) {
       '--edge': paint.border,
       '--ink': paint.ink,
       '--weight': `${s.weight || 1.5}px`,
-      borderStyle: s.dash ? 'dashed' : 'solid',
+      borderStyle: (s.dash || s.tone === 'text') ? 'dashed' : 'solid',
     },
   });
 
@@ -982,7 +994,7 @@ export async function putImageInShape(id, file) {
   paintWires();
 
   try {
-    const { uploadImage } = await import('./images.js?v=44ebe426f1');
+    const { uploadImage } = await import('./images.js?v=d258d51ea6');
     const src = await uploadImage(file);
     editShapes('picture in a box', (list) => {
       const t = list.find((x) => x.id === id);
@@ -1012,7 +1024,7 @@ export async function imageShapeAt(planePoint, file) {
   placeShape(s, { label: 'picture', edit: false });
 
   try {
-    const { uploadImage } = await import('./images.js?v=44ebe426f1');
+    const { uploadImage } = await import('./images.js?v=d258d51ea6');
     const src = await uploadImage(file);
     editShapes('picture', (list) => {
       const t = list.find((x) => x.id === s.id);
@@ -1337,7 +1349,7 @@ export function shapeMenu(id, x, y) {
     } : null,
     s.src ? {
       label: 'keep it as a preset', icon: 'plus', hint: 'every session',
-      onPick: async () => (await import('./presets.js?v=44ebe426f1')).addPresetFromSrc(s.src, stripHtml(s.html || '') || 'my picture'),
+      onPick: async () => (await import('./presets.js?v=d258d51ea6')).addPresetFromSrc(s.src, stripHtml(s.html || '') || 'my picture'),
     } : null,
     s.src ? { label: 'take the picture out', icon: 'close', onPick: () => patchSelection('remove picture', { src: null, pending: null, nat: null }) } : null,
     { sep: true },

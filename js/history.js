@@ -9,11 +9,11 @@
    restoring goes through `commit()`, so it lands on the undo stack like any
    other edit: change your mind and ctrl+z puts it back. */
 
-import { h, clear, fmtRel, fmtDate, fmtBytes, stripHtml } from './util.js?v=44ebe426f1';
-import { icon } from './icons.js?v=44ebe426f1';
-import { api } from './api.js?v=44ebe426f1';
-import { state, commit, saveNow } from './store.js?v=44ebe426f1';
-import { openModal, toast, confirmDialog } from './ui.js?v=44ebe426f1';
+import { h, clear, fmtRel, fmtDate, fmtBytes, stripHtml } from './util.js?v=d258d51ea6';
+import { icon } from './icons.js?v=d258d51ea6';
+import { api } from './api.js?v=d258d51ea6';
+import { state, commit, saveNow } from './store.js?v=d258d51ea6';
+import { openModal, toast, confirmDialog } from './ui.js?v=d258d51ea6';
 
 /** counts for the document as it stands, to compare a version against */
 function nowCounts() {
@@ -184,7 +184,7 @@ async function restore(boardId, v, close) {
   await saveNow();
   close?.(null);
 
-  const { go } = await import('./nav.js?v=44ebe426f1');
+  const { go } = await import('./nav.js?v=d258d51ea6');
   await go({ name: 'page', boardId, cardId: state.cardId });
   toast(`restored the version from ${fmtRel(v.stamp)} · ctrl+z undoes it`, { kind: 'ok', ms: 5000 });
 }

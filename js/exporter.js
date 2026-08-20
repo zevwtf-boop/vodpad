@@ -1,12 +1,12 @@
 /* turning a page (and everything nested under it) into a clean document —
    used by read mode, by markdown/html export, and by print-to-pdf. */
 
-import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=44ebe426f1';
-import { mediaUrl } from './api.js?v=44ebe426f1';
-import { state, card, childrenOf, cardTitle } from './store.js?v=44ebe426f1';
-import { paintStrokes } from './images.js?v=44ebe426f1';
-import { pathFor, sidePoint, bestSides } from './wires.js?v=44ebe426f1';
-import { toast } from './ui.js?v=44ebe426f1';
+import { h, stripHtml, download, fmtDate, fmtClock } from './util.js?v=d258d51ea6';
+import { mediaUrl } from './api.js?v=d258d51ea6';
+import { state, card, childrenOf, cardTitle } from './store.js?v=d258d51ea6';
+import { paintStrokes } from './images.js?v=d258d51ea6';
+import { pathFor, sidePoint, bestSides } from './wires.js?v=d258d51ea6';
+import { toast } from './ui.js?v=d258d51ea6';
 
 /* ---------------------------------------------------------------- dom render */
 
@@ -348,7 +348,7 @@ function mdInline(html) {
 */
 
 export async function exportClipList(doc, { csv = false } = {}) {
-  const { stampsInDoc, clipCsv, clipLines } = await import('./stamps.js?v=44ebe426f1');
+  const { stampsInDoc, clipCsv, clipLines } = await import('./stamps.js?v=d258d51ea6');
   const rows = stampsInDoc(doc);
 
   if (!rows.length) {

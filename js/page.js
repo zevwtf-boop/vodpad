@@ -2,21 +2,21 @@
    a main column, a margin gutter for side notes, and a free layer you can
    drop text anywhere on. */
 
-import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=44ebe426f1';
-import { icon } from './icons.js?v=44ebe426f1';
-import { mediaUrl } from './api.js?v=44ebe426f1';
-import { stampsOnCard, tidy, clipLines } from './stamps.js?v=44ebe426f1';
-import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting, SEV_LABEL, SEV_ORDER } from './store.js?v=44ebe426f1';
-import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=44ebe426f1';
-import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=44ebe426f1';
-import { initSelectionToolbar } from './toolbar.js?v=44ebe426f1';
-import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=44ebe426f1';
-import { stagger, animate, ping, EASE } from './motion.js?v=44ebe426f1';
-import { paintAnchors } from './anchors.js?v=44ebe426f1';
-import { paintWires, startWire, cancelWire, wiring } from './wires.js?v=44ebe426f1';
-import { mountVideoPanel } from './video.js?v=44ebe426f1';
-import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=44ebe426f1';
-import { renderShapes, startMarquee, addShapeAt, addShape, clearShapeSelection, tidySelection, shapesOf, syncZoom, selectShape } from './shapes.js?v=44ebe426f1';
+import { $, $$, h, clear, uid, clamp, debounce, rafThrottle, fmtClock, stripHtml } from './util.js?v=d258d51ea6';
+import { icon } from './icons.js?v=d258d51ea6';
+import { mediaUrl } from './api.js?v=d258d51ea6';
+import { stampsOnCard, tidy, clipLines } from './stamps.js?v=d258d51ea6';
+import { state, card, commit, quietly, bus, cardTitle, childrenOf, makeCard, deleteCard, syncTags, allTags, setSetting, SEV_LABEL, SEV_ORDER } from './store.js?v=d258d51ea6';
+import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=d258d51ea6';
+import { renderBlocks, insertBlock, currentBlockId, currentBody, focusBlock, getBlock, blockElById, pageStats } from './editor.js?v=d258d51ea6';
+import { initSelectionToolbar } from './toolbar.js?v=d258d51ea6';
+import { contextMenu, toast, popover, promptDialog, confirmDialog } from './ui.js?v=d258d51ea6';
+import { stagger, animate, ping, EASE } from './motion.js?v=d258d51ea6';
+import { paintAnchors } from './anchors.js?v=d258d51ea6';
+import { paintWires, startWire, cancelWire, wiring } from './wires.js?v=d258d51ea6';
+import { mountVideoPanel } from './video.js?v=d258d51ea6';
+import { mountWhiteboard, activeTool, renderInk, paintZoomPill } from './whiteboard.js?v=d258d51ea6';
+import { renderShapes, startMarquee, addShapeAt, addShape, clearShapeSelection, tidySelection, shapesOf, syncZoom, selectShape } from './shapes.js?v=d258d51ea6';
 
 let host = null;
 let sheet = null;
@@ -108,15 +108,20 @@ export function fitBoard() {
   viewTouch++;
   const c = card(state.cardId);
   const boxes = shapesOf(c);
-  let l = 0, t = 0, r = sheet.offsetWidth || 900, b = sheet.offsetHeight || 700;
+  const onPlane = sheet.isConnected;
+  let l = 0, t = 0;
+  let r = onPlane ? sheet.offsetWidth : 0;
+  let b = onPlane ? sheet.offsetHeight : 0;
   for (const s of boxes) {
     l = Math.min(l, s.x); t = Math.min(t, s.y);
     r = Math.max(r, s.x + s.w); b = Math.max(b, s.y + s.h);
   }
+  if (!boxes.length && !onPlane) { resetPageView(); return; }
   const pad = 46;
   const w = Math.max(200, r - l), hh = Math.max(200, b - t);
   const vw = viewport.clientWidth, vh = viewport.clientHeight;
-  const z = clamp(Math.min((vw - pad * 2) / w, (vh - pad * 2) / hh), 0.2, 1.4);
+  // fitting means "show me everything", never "magnify it" — 1 is the ceiling
+  const z = clamp(Math.min((vw - pad * 2) / w, (vh - pad * 2) / hh), 0.2, 1);
   view = { z, x: (vw - w * z) / 2 - l * z, y: (vh - hh * z) / 2 - t * z };
   if (plane) plane.style.transition = 'transform 320ms cubic-bezier(.22,.61,.36,1)';
   applyView();
@@ -306,7 +311,7 @@ export function render() {
   if (chrome.paper) plane.append(sheet);
   plane.append(h('div.page-shapes#page-shapes'), h('div.page-free#page-free'), svgLayer(), wireLayer());
   viewport.append(plane);
-  work.append(viewport, statusBar());
+  work.append(viewport, emptyPlaneHint(c, chrome), statusBar());
   shell.append(sideBar(), work);
   host.append(shell);
   mountVideoPanel(host);
@@ -518,7 +523,7 @@ function paintBoardList(body, c) {
         click: () => jumpToShape(s.id),
         contextmenu: (e) => {
           e.preventDefault();
-          import('./shapes.js?v=44ebe426f1').then((m) => m.shapeMenu(s.id, e.clientX, e.clientY));
+          import('./shapes.js?v=d258d51ea6').then((m) => m.shapeMenu(s.id, e.clientX, e.clientY));
         },
       },
     },
@@ -545,7 +550,7 @@ function paintImages(body, c) {
   if (!shots.length && !boxed.length) {
     body.append(h('div.side-empty',
       h('p', { text: 'paste a screenshot with ctrl+v, or drag one onto the plane and it becomes a box.' }),
-      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=44ebe426f1')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./images.js?v=d258d51ea6')).pickImageFile(card(state.cardId).blocks.at(-1)?.id) } },
         icon('image', { size: 13 }), 'add a picture')));
   } else {
     const grid = h('div.side-shots');
@@ -572,7 +577,7 @@ function paintImages(body, c) {
 }
 
 async function dropPresetHere(preset) {
-  const { dropPreset } = await import('./presets.js?v=44ebe426f1');
+  const { dropPreset } = await import('./presets.js?v=d258d51ea6');
   const vp = viewport?.getBoundingClientRect();
   const at = vp
     ? toPlane(vp.left + vp.width * 0.55, vp.top + vp.height * 0.45)
@@ -582,7 +587,7 @@ async function dropPresetHere(preset) {
 }
 
 function paintPresets(body) {
-  import('./presets.js?v=44ebe426f1').then((lib) => {
+  import('./presets.js?v=d258d51ea6').then((lib) => {
     const host = $('#side-presets');
     if (!host) return;
     clear(host);
@@ -658,7 +663,7 @@ function paintTimeline(body, c) {
   if (!rows.length) {
     body.append(h('div.side-empty',
       h('p', { text: 'press t while the vod plays and the moment lands here.' }),
-      h('button.btn.btn-sm', { on: { click: async () => (await import('./video.js?v=44ebe426f1')).insertTimestamp(currentBlockId() || c.blocks.at(-1)?.id) } },
+      h('button.btn.btn-sm', { on: { click: async () => (await import('./video.js?v=d258d51ea6')).insertTimestamp(currentBlockId() || c.blocks.at(-1)?.id) } },
         icon('clock', { size: 13 }), 'stamp this moment')));
     return;
   }
@@ -682,7 +687,7 @@ function paintTimeline(body, c) {
 }
 
 async function goToStamp(row) {
-  try { (await import('./video.js?v=44ebe426f1')).seekTo(row.t); } catch { /* no video panel is fine */ }
+  try { (await import('./video.js?v=d258d51ea6')).seekTo(row.t); } catch { /* no video panel is fine */ }
   if (row.kind === 'card') { openCardPage(row.ref); return; }
   if (row.kind === 'block') { jumpToBlock(row.ref); return; }
   const el = $(row.kind === 'side' ? `.sidenote[data-id="${CSS.escape(row.ref)}"]` : `.freebox[data-id="${CSS.escape(row.ref)}"]`);
@@ -852,7 +857,7 @@ function paintAddPalette(body, c) {
   const at = () => currentBlockId() || lastId();
 
   const add = async (type, extra) => {
-    const ed = await import('./editor.js?v=44ebe426f1');
+    const ed = await import('./editor.js?v=d258d51ea6');
     const made = ed.insertBlock(at(), { type: 'p' }, false);
     if (type === 'p') { ed.focusBlock(made.id, 'end'); return; }
     ed.setType(made.id, type, extra);
@@ -870,7 +875,7 @@ function paintAddPalette(body, c) {
     ['code', 'codeTag', () => add('code')],
     ['divider', 'divider', () => add('divider')],
     ['table', 'table', () => add('table', { rows: [['', '', ''], ['', '', ''], ['', '', '']], header: true })],
-    ['picture', 'image', async () => (await import('./images.js?v=44ebe426f1')).pickImageFile(at())],
+    ['picture', 'image', async () => (await import('./images.js?v=d258d51ea6')).pickImageFile(at())],
     ['box', 'roundBox', () => addShape()],
     ['sticky note', 'note', () => addShape({ kind: 'sticky', fill: '#ffd54a', tone: 'solid', align: 'left', valign: 'top', w: 180, h: 170 })],
     ['decision', 'diamond', () => addShape({ kind: 'diamond' })],
@@ -878,7 +883,7 @@ function paintAddPalette(body, c) {
     ['text box', 'textbox', () => addShape({ kind: 'rect', tone: 'text', align: 'left', valign: 'top', w: 240, h: 60 })],
     ['margin note', 'sidenote', () => addSidenoteFromSelection()],
     ['sub-page', 'cards', () => addSubPage(at())],
-    ['timestamp', 'clock', async () => (await import('./video.js?v=44ebe426f1')).insertTimestamp(at())],
+    ['timestamp', 'clock', async () => (await import('./video.js?v=d258d51ea6')).insertTimestamp(at())],
   ];
 
   body.append(h('div.side-grid', ...items.map(([label, ico, run]) => h('button.side-add', {
@@ -980,7 +985,7 @@ export function markOutlinePosition() {
 }
 
 async function addHeading() {
-  const ed = await import('./editor.js?v=44ebe426f1');
+  const ed = await import('./editor.js?v=d258d51ea6');
   const last = card(state.cardId).blocks.at(-1)?.id;
   const made = ed.insertBlock(last, { type: 'p' }, false);
   ed.setType(made.id, 'h2');
@@ -1057,6 +1062,26 @@ export function setChrome(part, on) {
   }
 }
 
+/* a page with nothing on it and no paper is a black rectangle, which reads as
+   a broken app rather than as an empty one. this is the one thing on screen
+   that says what to do, and it takes itself away the moment anything exists.
+   it lives in screen space rather than on the plane, so panning and zooming
+   cannot lose it. */
+
+function emptyPlaneHint(c, chrome) {
+  if (chrome.paper) return null;
+  const bare = !(c.shapes || []).length && !(c.free || []).length && !(c.ink || []).length;
+  if (!bare) return null;
+
+  return h('div.plane-hint',
+    h('div.plane-hint-card',
+      h('div.plane-hint-title', { text: 'nothing here yet' }),
+      h('div.plane-hint-line', { text: 'double-click anywhere out here to put a box down, or drag one out with the box tool on the left.' }),
+      h('div.plane-hint-acts',
+        h('button.btn.btn-sm.btn-primary', { on: { click: () => addShape() } }, icon('roundBox', { size: 13 }), 'put a box down'),
+        h('button.btn.btn-sm', { on: { click: () => setChrome('paper', true) } }, icon('page', { size: 13 }), 'bring the paper back'))));
+}
+
 /** a page with its paper hidden but writing still on it says so, rather than
  *  quietly swallowing a page of notes */
 function hiddenPaperChip(c) {
@@ -1088,7 +1113,7 @@ function paintMeta() {
   if (c.t !== null && c.t !== undefined) {
     wrap.append(h('button.chip.chip-time', {
       tip: 'jump the video here',
-      on: { click: async () => (await import('./video.js?v=44ebe426f1')).seekTo(c.t) },
+      on: { click: async () => (await import('./video.js?v=d258d51ea6')).seekTo(c.t) },
     }, icon('clock', { size: 12 }), fmtClock(c.t)));
   }
 
@@ -1123,13 +1148,13 @@ function tagMenu(anchor) {
   const existing = allTags().map(([t]) => t).filter((t) => !(c.tags || []).includes(t));
   const input = h('input.field', { placeholder: 'new tag…', spellcheck: false });
   const list = h('div.tag-pop-list', ...existing.slice(0, 8).map((t) => h('button.menu-row', {
-    on: { click: () => { addTag(t); import('./ui.js?v=44ebe426f1').then((m) => m.closePopover()); } },
+    on: { click: () => { addTag(t); import('./ui.js?v=d258d51ea6').then((m) => m.closePopover()); } },
   }, h('span.menu-ico', { text: '#' }), h('span.menu-label', { text: t }))));
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const value = input.value.trim().replace(/^#/, '').toLowerCase().replace(/\s+/g, '-');
       if (value) addTag(value);
-      import('./ui.js?v=44ebe426f1').then((m) => m.closePopover());
+      import('./ui.js?v=d258d51ea6').then((m) => m.closePopover());
     }
   });
   popover(h('div.tag-pop', input, existing.length ? list : null), { anchor, width: 210 });
@@ -1164,7 +1189,7 @@ function pageMenu(anchor) {
   const c = card(state.cardId);
   contextMenu([
     { label: 'open the map', icon: 'grid', hint: 'ctrl+b', onPick: () => toggleMap() },
-    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=44ebe426f1')).openReader() },
+    { label: 'read mode', icon: 'book', hint: 'ctrl+r', onPick: async () => (await import('./readmode.js?v=d258d51ea6')).openReader() },
     { sep: true },
     { label: 'add a sub-page', icon: 'cards', onPick: () => addSubPage(null) },
     { label: 'put a box on the board', icon: 'roundBox', hint: 'r', onPick: () => addShape() },
@@ -1173,20 +1198,20 @@ function pageMenu(anchor) {
     { label: 'tidy the boxes into a grid', icon: 'tidy', hint: 'whole board', onPick: () => tidySelection() },
     { label: 'what this page shows', icon: 'eye', subWidth: 240, sub: chromeItems() },
     { label: 'arrange this page…', icon: 'grid', hint: 'presets',
-      onPick: async () => (await import('./layouts.js?v=44ebe426f1')).openLayouts() },
+      onPick: async () => (await import('./layouts.js?v=d258d51ea6')).openLayouts() },
     { sep: true },
     { label: 'loot routes', icon: 'target', hint: 'map',
-      onPick: async () => (await import('./lootmap.js?v=44ebe426f1')).openLootmap() },
+      onPick: async () => (await import('./lootmap.js?v=d258d51ea6')).openLootmap() },
     { label: 'earlier versions of this session', icon: 'history',
-      onPick: async () => (await import('./history.js?v=44ebe426f1')).openHistory() },
+      onPick: async () => (await import('./history.js?v=d258d51ea6')).openHistory() },
     { label: 'save this page as a template', icon: 'copy', hint: 'reuse',
-      onPick: async () => (await import('./templates.js?v=44ebe426f1')).saveAsTemplate(c) },
+      onPick: async () => (await import('./templates.js?v=d258d51ea6')).saveAsTemplate(c) },
     { sep: true },
-    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=44ebe426f1')).exportMarkdown(c.id) },
-    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=44ebe426f1')).exportHtml(c.id) },
-    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=44ebe426f1')).exportSession(state.board.id) },
+    { label: 'export markdown', icon: 'download', onPick: async () => (await import('./exporter.js?v=d258d51ea6')).exportMarkdown(c.id) },
+    { label: 'export html', icon: 'download', onPick: async () => (await import('./exporter.js?v=d258d51ea6')).exportHtml(c.id) },
+    { label: 'export the whole session (.vodpad)', icon: 'download', onPick: async () => (await import('./transfer.js?v=d258d51ea6')).exportSession(state.board.id) },
     { label: 'export the clip list', icon: 'clock', hint: '.csv',
-      onPick: async () => (await import('./exporter.js?v=44ebe426f1')).exportClipList(state.board, { csv: true }) },
+      onPick: async () => (await import('./exporter.js?v=d258d51ea6')).exportClipList(state.board, { csv: true }) },
     ...(c.parent ? [{ sep: true }, { label: 'delete this page', icon: 'trash', danger: true, onPick: () => removePage(c) }] : []),
   ], { anchor, align: 'end' });
 }
@@ -1272,7 +1297,7 @@ export function addSidenoteFromSelection() {
   const noteId = uid('sn');
   const sel = getSelection();
   if (sel && !sel.isCollapsed) {
-    import('./editor.js?v=44ebe426f1').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
+    import('./editor.js?v=d258d51ea6').then((ed) => ed.wrapSelection('span', { 'data-side': noteId }));
   } else {
     const mark = document.createElement('span');
     mark.setAttribute('data-side', noteId);
@@ -1426,7 +1451,7 @@ function freeBoxEl(box) {
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      import('./whiteboard.js?v=44ebe426f1').then(({ STICKY_COLOURS }) => {
+      import('./whiteboard.js?v=d258d51ea6').then(({ STICKY_COLOURS }) => {
         contextMenu([
           { row: STICKY_COLOURS.map((c) => ({ icon: 'callout', color: c, tip: 'recolour', onPick: () => {
             const cardId = state.cardId;

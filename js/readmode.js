@@ -1,12 +1,12 @@
 /* read mode — the same notes, laid out as a document you can actually read
    start to finish. this is the "google doc" half of the app. */
 
-import { $, h, clear } from './util.js?v=44ebe426f1';
-import { icon } from './icons.js?v=44ebe426f1';
-import { state, card, cardTitle } from './store.js?v=44ebe426f1';
-import { pushLayer, dropLayer, toast } from './ui.js?v=44ebe426f1';
-import { animate, stagger, settle, fadeOut, EASE } from './motion.js?v=44ebe426f1';
-import { renderCardTree, exportMarkdown, exportHtml } from './exporter.js?v=44ebe426f1';
+import { $, h, clear } from './util.js?v=d258d51ea6';
+import { icon } from './icons.js?v=d258d51ea6';
+import { state, card, cardTitle } from './store.js?v=d258d51ea6';
+import { pushLayer, dropLayer, toast } from './ui.js?v=d258d51ea6';
+import { animate, stagger, settle, fadeOut, EASE } from './motion.js?v=d258d51ea6';
+import { renderCardTree, exportMarkdown, exportHtml } from './exporter.js?v=d258d51ea6';
 
 let close = null;
 
