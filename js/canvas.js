@@ -5,13 +5,13 @@
    until the whole session is one shape you can read.
 */
 
-import { $, $$, h, clear, clamp, uid, rafThrottle, previewOf, stripHtml, debounce } from './util.js?v=d258d51ea6';
-import { icon } from './icons.js?v=d258d51ea6';
-import { mediaUrl } from './api.js?v=d258d51ea6';
-import { state, card, commit, quietly, childrenOf, cardTitle, makeCard, deleteCard, reparentCard, matchesFilter, filterActive, allTags, bus } from './store.js?v=d258d51ea6';
-import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=d258d51ea6';
-import { contextMenu, toast, confirmDialog } from './ui.js?v=d258d51ea6';
-import { animate, stagger, EASE, ping } from './motion.js?v=d258d51ea6';
+import { $, $$, h, clear, clamp, uid, rafThrottle, previewOf, stripHtml, debounce } from './util.js?v=2e4abb3f3d';
+import { icon } from './icons.js?v=2e4abb3f3d';
+import { mediaUrl } from './api.js?v=2e4abb3f3d';
+import { state, card, commit, quietly, childrenOf, cardTitle, makeCard, deleteCard, reparentCard, matchesFilter, filterActive, allTags, bus } from './store.js?v=2e4abb3f3d';
+import { registerSurface, go, openCardPage, toggleMap } from './nav.js?v=2e4abb3f3d';
+import { contextMenu, toast, confirmDialog } from './ui.js?v=2e4abb3f3d';
+import { animate, stagger, EASE, ping } from './motion.js?v=2e4abb3f3d';
 
 let host = null, world = null, linksSvg = null, viewport = null;
 let view = { x: 0, y: 0, z: 1 };

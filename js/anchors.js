@@ -4,10 +4,10 @@
    it survives typing, cut/paste and undo — character offsets would not.
 */
 
-import { $, $$, h, uid } from './util.js?v=d258d51ea6';
-import { state, card, commit, quietly } from './store.js?v=d258d51ea6';
-import { toast } from './ui.js?v=d258d51ea6';
-import { ping, animate } from './motion.js?v=d258d51ea6';
+import { $, $$, h, uid } from './util.js?v=2e4abb3f3d';
+import { state, card, commit, quietly } from './store.js?v=2e4abb3f3d';
+import { toast } from './ui.js?v=2e4abb3f3d';
+import { ping, animate } from './motion.js?v=2e4abb3f3d';
 
 let wired = false;
 let picking = null;
@@ -30,7 +30,7 @@ function saveBlockHtml(blockId) {
 /* ---------------------------------------------------------------- from text → picture */
 
 export async function startAnchorPick() {
-  const ed = await import('./editor.js?v=d258d51ea6');
+  const ed = await import('./editor.js?v=2e4abb3f3d');
   const body = ed.currentBody();
   const blockId = ed.currentBlockId();
   if (!body || !blockId) { toast('select some text first', { kind: 'warn' }); return; }
@@ -226,7 +226,7 @@ function wire() {
     const mark = e.target.closest?.('.anchor-mark');
     if (!mark) return;
     e.preventDefault();
-    const { contextMenu } = await import('./ui.js?v=d258d51ea6');
+    const { contextMenu } = await import('./ui.js?v=2e4abb3f3d');
     contextMenu([
       { label: 'go to the picture', icon: 'image', onPick: () => mark.click() },
       { label: 'remove this link', icon: 'unlink', danger: true, onPick: () => removeAnchor(mark.dataset.anchor) },

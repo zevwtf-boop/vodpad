@@ -16,12 +16,12 @@
    lives in `map.calib` and can be nudged if a season ships a different crop.
 */
 
-import { $, h, clear, clamp, uid, download, fmtClock, parseClock } from './util.js?v=d258d51ea6';
-import { icon } from './icons.js?v=d258d51ea6';
-import { api } from './api.js?v=d258d51ea6';
-import { state, commit, quietly } from './store.js?v=d258d51ea6';
-import { toast, contextMenu, promptDialog, confirmDialog, openModal, pushLayer, dropLayer } from './ui.js?v=d258d51ea6';
-import { animate, EASE } from './motion.js?v=d258d51ea6';
+import { $, h, clear, clamp, uid, download, fmtClock, parseClock } from './util.js?v=2e4abb3f3d';
+import { icon } from './icons.js?v=2e4abb3f3d';
+import { api } from './api.js?v=2e4abb3f3d';
+import { state, commit, quietly } from './store.js?v=2e4abb3f3d';
+import { toast, contextMenu, promptDialog, confirmDialog, openModal, pushLayer, dropLayer } from './ui.js?v=2e4abb3f3d';
+import { animate, EASE } from './motion.js?v=2e4abb3f3d';
 
 /* the island image covers a 270,000-unit square centred on the origin. this is
    the community convention and matches the capture's own note ("worst residual
@@ -606,7 +606,7 @@ function routesSection(map) {
           h('span', { text: route.name }),
           route.t !== null && route.t !== undefined
             ? h('button.lm-route-t', { tip: 'jump the vod to where you ran this',
-                on: { click: async () => { try { (await import('./video.js?v=d258d51ea6')).seekTo(route.t); } catch { /* no panel is fine */ } } },
+                on: { click: async () => { try { (await import('./video.js?v=2e4abb3f3d')).seekTo(route.t); } catch { /* no panel is fine */ } } },
               }, fmtClock(route.t))
             : null),
         h('div.lm-route-sub', { text: stops.length < 2
@@ -677,7 +677,7 @@ function routeMenu(route, anchor) {
         // take the vod's current position if the panel is open, otherwise ask
         let t = null;
         try {
-          const vid = await import('./video.js?v=d258d51ea6');
+          const vid = await import('./video.js?v=2e4abb3f3d');
           t = vid.currentTime();
         } catch { /* no panel */ }
         if (!t) {
@@ -736,7 +736,7 @@ function layersSection(map) {
 */
 
 async function loadGhosts() {
-  const { loadCorpus } = await import('./corpus.js?v=d258d51ea6');
+  const { loadCorpus } = await import('./corpus.js?v=2e4abb3f3d');
   const docs = await loadCorpus();
   const out = [];
   for (const doc of docs) {
@@ -788,7 +788,7 @@ function drawGhosts(svg, map) {
       e.stopPropagation();
       if (d.boardId === state.board?.id) return;
       shut();
-      import('./nav.js?v=d258d51ea6').then((n) => n.go({ name: 'page', boardId: d.boardId }));
+      import('./nav.js?v=2e4abb3f3d').then((n) => n.go({ name: 'page', boardId: d.boardId }));
     });
     node.addEventListener('pointerdown', (e) => e.stopPropagation());
     g.append(node);
