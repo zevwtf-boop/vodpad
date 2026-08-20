@@ -1,11 +1,11 @@
 /* the gear — everything you can change lives here, not in a ribbon. */
 
-import { $, h, clear } from './util.js?v=2e4abb3f3d';
-import { icon } from './icons.js?v=2e4abb3f3d';
-import { api, isStatic, mode } from './api.js?v=2e4abb3f3d';
-import { state, setSetting, bus } from './store.js?v=2e4abb3f3d';
-import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from './ui.js?v=2e4abb3f3d';
-import { animate, settle, fadeOut, EASE } from './motion.js?v=2e4abb3f3d';
+import { $, h, clear } from './util.js?v=13c601f470';
+import { icon } from './icons.js?v=13c601f470';
+import { api, isStatic, mode } from './api.js?v=13c601f470';
+import { state, setSetting, bus } from './store.js?v=13c601f470';
+import { pushLayer, dropLayer, labelled, segmented, toast, confirmDialog } from './ui.js?v=13c601f470';
+import { animate, settle, fadeOut, EASE } from './motion.js?v=13c601f470';
 
 const THEMES = [
   ['graphite', 'graphite', ['#17191c', '#25282c', '#e5484d']],
@@ -228,7 +228,7 @@ function surfaceTab(s) {
   const restore = h('div.gear-restore');
   const paintRestore = () => {
     clear(restore);
-    Promise.all([import('./presets.js?v=2e4abb3f3d'), import('./templates.js?v=2e4abb3f3d')]).then(([presets, templates]) => {
+    Promise.all([import('./presets.js?v=13c601f470'), import('./templates.js?v=13c601f470')]).then(([presets, templates]) => {
       const gone = presets.deletedCount();
       const goneTpl = templates.hiddenTemplateCount();
       if (!gone && !goneTpl) {
@@ -301,9 +301,9 @@ function dataTab() {
     state.board ? h('section.gear-section',
       h('h3', { text: 'export this session' }),
       h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=2e4abb3f3d')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=2e4abb3f3d')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
-        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=2e4abb3f3d')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=13c601f470')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=13c601f470')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
+        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=13c601f470')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
     ) : null,
     h('section.gear-section',
       h('h3', { text: 'server' }),
@@ -318,7 +318,7 @@ function webDataTab() {
   const synced = mode === 'cloud';
   const size = h('p.modal-text', { text: synced ? '' : 'measuring…' });
   if (!synced) {
-    import('./vault.js?v=2e4abb3f3d').then(async (v) => {
+    import('./vault.js?v=13c601f470').then(async (v) => {
       const s = await v.vaultSize();
       size.textContent = `${s.records} sealed records · about ${(s.bytes / 1048576).toFixed(1)} mb, all of it encrypted with your password.`;
     });
@@ -333,7 +333,7 @@ function webDataTab() {
           : `you are ${currentUserName()} on the hosted copy. your notes live in this browser only — they do not follow you to another device.`,
       }),
       size,
-      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./api.js?v=2e4abb3f3d')).signOut() } },
+      h('button.btn', { style: { marginTop: '12px' }, on: { click: async () => (await import('./api.js?v=13c601f470')).signOut() } },
         icon('back', { size: 14 }), 'sign out'),
     ),
     synced ? null : h('section.gear-section',
@@ -346,9 +346,9 @@ function webDataTab() {
     state.board ? h('section.gear-section',
       h('h3', { text: 'export this session' }),
       h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=2e4abb3f3d')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
-        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=2e4abb3f3d')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
-        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=2e4abb3f3d')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=13c601f470')).exportMarkdown(state.board.rootId) } }, icon('download', { size: 14 }), 'markdown'),
+        h('button.btn', { on: { click: async () => (await import('./exporter.js?v=13c601f470')).exportHtml(state.board.rootId) } }, icon('download', { size: 14 }), 'html'),
+        h('button.btn', { on: { click: async () => (await import('./readmode.js?v=13c601f470')).openReader({ print: true }) } }, icon('page', { size: 14 }), 'pdf / print')),
     ) : null,
   );
 }
@@ -358,8 +358,8 @@ function currentUserName() {
 }
 
 async function doBackup() {
-  const v = await import('./vault.js?v=2e4abb3f3d');
-  const { download } = await import('./util.js?v=2e4abb3f3d');
+  const v = await import('./vault.js?v=13c601f470');
+  const { download } = await import('./util.js?v=13c601f470');
   const vault = await v.exportVault();
   download(`vodpad-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(vault), 'application/json');
   toast('backup saved to downloads — it is encrypted', { kind: 'ok' });
@@ -373,7 +373,7 @@ async function doRestore() {
     input.remove();
     if (!file) return;
     try {
-      const v = await import('./vault.js?v=2e4abb3f3d');
+      const v = await import('./vault.js?v=13c601f470');
       const n = await v.importVault(file);
       toast(`restored ${n} records — reloading`, { kind: 'ok' });
       setTimeout(() => location.reload(), 900);

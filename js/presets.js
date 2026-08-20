@@ -21,10 +21,10 @@
    the account rather than the session.
 */
 
-import { h, uid } from './util.js?v=2e4abb3f3d';
-import { state, setSetting } from './store.js?v=2e4abb3f3d';
-import { toast, confirmDialog, promptDialog } from './ui.js?v=2e4abb3f3d';
-import { api, mediaUrl } from './api.js?v=2e4abb3f3d';
+import { h, uid } from './util.js?v=13c601f470';
+import { state, setSetting } from './store.js?v=13c601f470';
+import { toast, confirmDialog, promptDialog } from './ui.js?v=13c601f470';
+import { api, mediaUrl } from './api.js?v=13c601f470';
 
 /* ---------------------------------------------------------------- paints */
 
@@ -165,7 +165,7 @@ export function presetSrc(preset) {
 
 /** put a preset on the board at a point on the plane */
 export async function dropPreset(preset, planePoint) {
-  const shapes = await import('./shapes.js?v=2e4abb3f3d');
+  const shapes = await import('./shapes.js?v=13c601f470');
   let src = presetSrc(preset);
   let size = { w: preset.w || 160, h: preset.h || 160 };
 

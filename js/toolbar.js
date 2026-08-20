@@ -3,11 +3,11 @@
    - a "/" menu that inserts anything
 */
 
-import { $, h, clamp, uid, debounce } from './util.js?v=2e4abb3f3d';
-import { icon } from './icons.js?v=2e4abb3f3d';
-import { state } from './store.js?v=2e4abb3f3d';
-import { popIn, popOut } from './motion.js?v=2e4abb3f3d';
-import { promptDialog, toast, popover, pushLayer, dropLayer } from './ui.js?v=2e4abb3f3d';
+import { $, h, clamp, uid, debounce } from './util.js?v=13c601f470';
+import { icon } from './icons.js?v=13c601f470';
+import { state } from './store.js?v=13c601f470';
+import { popIn, popOut } from './motion.js?v=13c601f470';
+import { promptDialog, toast, popover, pushLayer, dropLayer } from './ui.js?v=13c601f470';
 
 let selBar = null;
 let barVisible = false;
@@ -30,7 +30,7 @@ async function update() {
   const body = el?.closest('.blk-body, .sidenote-body, .freebox-body');
   if (!body || !sel.toString().trim()) return hide();
 
-  const editor = await import('./editor.js?v=2e4abb3f3d');
+  const editor = await import('./editor.js?v=13c601f470');
   if (!barVisible) build(editor);
   paintStates(editor);
 
@@ -105,7 +105,7 @@ function turnMenu(anchor, editor) {
   const list = h('div.pop-list', ...rows.map(([type, label, ico]) => h('button.menu-row', {
     on: {
       mousedown: (e) => e.preventDefault(),
-      click: () => { editor.setType(id, type); import('./ui.js?v=2e4abb3f3d').then((m) => m.closePopover()); },
+      click: () => { editor.setType(id, type); import('./ui.js?v=13c601f470').then((m) => m.closePopover()); },
     },
   }, h('span.menu-ico', icon(ico, { size: 15 })), h('span.menu-label', { text: label }))));
   popover(list, { anchor, width: 190 });
@@ -120,15 +120,15 @@ function colorMenu(anchor, editor) {
     h('div.color-label', { text: 'highlight' }),
     h('div.color-row', ...swatches.map(([name, css]) => h('button.color-dot', {
       style: { background: css }, tip: name,
-      on: { mousedown: keep, click: () => { editor.wrapSelection('mark', { 'data-hl': name }); import('./ui.js?v=2e4abb3f3d').then((m) => m.closePopover()); } },
+      on: { mousedown: keep, click: () => { editor.wrapSelection('mark', { 'data-hl': name }); import('./ui.js?v=13c601f470').then((m) => m.closePopover()); } },
     }))),
     h('div.color-label', { text: 'text' }),
     h('div.color-row', ...swatches.map(([name, css]) => h('button.color-dot.color-ring', {
       style: { color: css }, tip: name,
-      on: { mousedown: keep, click: () => { editor.wrapSelection('span', { 'data-c': name }); import('./ui.js?v=2e4abb3f3d').then((m) => m.closePopover()); } },
+      on: { mousedown: keep, click: () => { editor.wrapSelection('span', { 'data-c': name }); import('./ui.js?v=13c601f470').then((m) => m.closePopover()); } },
     }, h('i', { style: { background: css } })))),
     h('button.btn.btn-sm.btn-ghost', {
-      on: { mousedown: keep, click: () => { editor.clearFormatting(); import('./ui.js?v=2e4abb3f3d').then((m) => m.closePopover()); } },
+      on: { mousedown: keep, click: () => { editor.clearFormatting(); import('./ui.js?v=13c601f470').then((m) => m.closePopover()); } },
     }, 'clear'),
   );
   popover(wrap, { anchor, width: 188 });
@@ -144,12 +144,12 @@ async function addLink(editor) {
 }
 
 async function linkToPicture() {
-  const { startAnchorPick } = await import('./anchors.js?v=2e4abb3f3d');
+  const { startAnchorPick } = await import('./anchors.js?v=13c601f470');
   startAnchorPick();
 }
 
 async function addSidenote() {
-  const { addSidenoteFromSelection } = await import('./page.js?v=2e4abb3f3d');
+  const { addSidenoteFromSelection } = await import('./page.js?v=13c601f470');
   addSidenoteFromSelection();
 }
 
@@ -271,7 +271,7 @@ async function pick() {
   if (!item) return;
 
   body.innerHTML = '';                            // drop the "/query" text
-  const editor = await import('./editor.js?v=2e4abb3f3d');
+  const editor = await import('./editor.js?v=13c601f470');
   editor.exec('delete');                          // keep the model in step
   const block = editor.getBlock(blockId);
   if (block) block.html = '';
@@ -285,28 +285,28 @@ async function pick() {
       editor.setType(blockId, 'table', { rows: [['', '', ''], ['', '', ''], ['', '', '']], header: true });
       break;
     case 'image': {
-      const { pickImageFile } = await import('./images.js?v=2e4abb3f3d');
+      const { pickImageFile } = await import('./images.js?v=13c601f470');
       pickImageFile(blockId);
       break;
     }
     case 'sidenote': {
-      const { addSidenoteFromSelection } = await import('./page.js?v=2e4abb3f3d');
+      const { addSidenoteFromSelection } = await import('./page.js?v=13c601f470');
       editor.focusBlock(blockId, 'end');
       addSidenoteFromSelection();
       break;
     }
     case 'textbox': {
-      const { addShape } = await import('./shapes.js?v=2e4abb3f3d');
+      const { addShape } = await import('./shapes.js?v=13c601f470');
       addShape({ kind: 'rect', tone: 'text', align: 'left', valign: 'top', w: 240, h: 60 });
       break;
     }
     case 'timestamp': {
-      const { insertTimestamp } = await import('./video.js?v=2e4abb3f3d');
+      const { insertTimestamp } = await import('./video.js?v=13c601f470');
       insertTimestamp(blockId);
       break;
     }
     case 'subpage': {
-      const { addSubPage } = await import('./page.js?v=2e4abb3f3d');
+      const { addSubPage } = await import('./page.js?v=13c601f470');
       addSubPage(blockId);
       break;
     }

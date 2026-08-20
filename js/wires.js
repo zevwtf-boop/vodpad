@@ -17,9 +17,9 @@
               ends:'to'|'from'|'both'|'none', dash, weight }
 */
 
-import { $, uid } from './util.js?v=2e4abb3f3d';
-import { state, card, commit } from './store.js?v=2e4abb3f3d';
-import { toast, contextMenu, promptDialog } from './ui.js?v=2e4abb3f3d';
+import { $, uid } from './util.js?v=13c601f470';
+import { state, card, commit } from './store.js?v=13c601f470';
+import { toast, contextMenu, promptDialog } from './ui.js?v=13c601f470';
 
 const NS = 'http://www.w3.org/2000/svg';
 export const WIRE_COLOURS = ['#a4abb3', '#e5484d', '#5ab0e0', '#45b08a', '#e0a13d', '#b57edc'];

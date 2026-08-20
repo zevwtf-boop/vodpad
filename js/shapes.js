@@ -21,15 +21,15 @@
    use, so everything pans and zooms together.
 */
 
-import { $, $$, h, clear, uid, clamp, rafThrottle, stripHtml } from './util.js?v=2e4abb3f3d';
-import { icon } from './icons.js?v=2e4abb3f3d';
-import { mediaUrl } from './api.js?v=2e4abb3f3d';
-import { state, card, commit, bus, makeCard } from './store.js?v=2e4abb3f3d';
-import { contextMenu, toast } from './ui.js?v=2e4abb3f3d';
-import { animate, EASE } from './motion.js?v=2e4abb3f3d';
-import { paintWires, addWire, wiring, ghostWire, clearGhost, boxOfEl, sidePoint } from './wires.js?v=2e4abb3f3d';
-import { activeTool, setTool, STICKY_COLOURS } from './whiteboard.js?v=2e4abb3f3d';
-import { openCardPage } from './nav.js?v=2e4abb3f3d';
+import { $, $$, h, clear, uid, clamp, rafThrottle, stripHtml } from './util.js?v=13c601f470';
+import { icon } from './icons.js?v=13c601f470';
+import { mediaUrl } from './api.js?v=13c601f470';
+import { state, card, commit, bus, makeCard } from './store.js?v=13c601f470';
+import { contextMenu, toast } from './ui.js?v=13c601f470';
+import { animate, EASE } from './motion.js?v=13c601f470';
+import { paintWires, addWire, wiring, ghostWire, clearGhost, boxOfEl, sidePoint } from './wires.js?v=13c601f470';
+import { activeTool, setTool, STICKY_COLOURS } from './whiteboard.js?v=13c601f470';
+import { openCardPage } from './nav.js?v=13c601f470';
 
 /* ---------------------------------------------------------------- the paints
 
@@ -200,6 +200,8 @@ export function renderShapes() {
   // come and go with the boxes, not only on a full re-render
   const hint = document.querySelector('.plane-hint');
   if (hint) hint.hidden = shapesOf(c).length > 0;
+  // the counts along the bottom belong to page.js, and boxes are part of them
+  bus.emit('shapes:changed');
   syncZoom();
   paintSelection();
 }
@@ -994,7 +996,7 @@ export async function putImageInShape(id, file) {
   paintWires();
 
   try {
-    const { uploadImage } = await import('./images.js?v=2e4abb3f3d');
+    const { uploadImage } = await import('./images.js?v=13c601f470');
     const src = await uploadImage(file);
     editShapes('picture in a box', (list) => {
       const t = list.find((x) => x.id === id);
@@ -1024,7 +1026,7 @@ export async function imageShapeAt(planePoint, file) {
   placeShape(s, { label: 'picture', edit: false });
 
   try {
-    const { uploadImage } = await import('./images.js?v=2e4abb3f3d');
+    const { uploadImage } = await import('./images.js?v=13c601f470');
     const src = await uploadImage(file);
     editShapes('picture', (list) => {
       const t = list.find((x) => x.id === s.id);
@@ -1349,7 +1351,7 @@ export function shapeMenu(id, x, y) {
     } : null,
     s.src ? {
       label: 'keep it as a preset', icon: 'plus', hint: 'every session',
-      onPick: async () => (await import('./presets.js?v=2e4abb3f3d')).addPresetFromSrc(s.src, stripHtml(s.html || '') || 'my picture'),
+      onPick: async () => (await import('./presets.js?v=13c601f470')).addPresetFromSrc(s.src, stripHtml(s.html || '') || 'my picture'),
     } : null,
     s.src ? { label: 'take the picture out', icon: 'close', onPick: () => patchSelection('remove picture', { src: null, pending: null, nat: null }) } : null,
     { sep: true },
